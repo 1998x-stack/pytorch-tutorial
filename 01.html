@@ -4,12 +4,21 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.5, user-scalable=yes">
     <title>第1章 初识PyTorch — PyTorch教程</title>
+    <style>
+        body { font-family: system-ui, -apple-system, 'PingFang SC', 'Segoe UI', sans-serif; line-height: 1.8; margin: 0; padding: 12px; }
+        .container, .main-content { min-width: 0; }
+        .main-content { overflow-x: auto; }
+        pre { overflow-x: auto; max-width: 100%; }
+        pre, code { font-family: 'JetBrains Mono', ui-monospace, monospace; }
+        table { max-width: 100%; }
+        img, svg { max-width: 100%; }
+    </style>
     <link rel="stylesheet" href="theme.css">
 </head>
 <body>
 <div class="double-border">
 <div class="container">
-    <div class="sidebar">
+    <nav class="sidebar" aria-label="课程目录">
         <h3>🔥 课程目录</h3>
         <ul class="chapter-list">
             <li><a href="01.html" class="active">第1章 初识PyTorch</a></li>
@@ -41,10 +50,10 @@
             <li><a href="27.html">第27章 实战项目：图像分类全流程</a></li>
             <li><a href="28.html">第28章 课程总结与学习路线</a></li>
         </ul>
-    </div>
-    <div class="main-content">
+    </nav>
+    <main class="main-content">
 
-<h2>第1章 初识PyTorch</h2>
+<h1>第1章 初识PyTorch</h1>
 
 <p>大家好，我是你们的讲师。很高兴能和大家一起踏上这趟 PyTorch 学习之旅。</p>
 
@@ -75,6 +84,34 @@
         <li><strong>生产级性能</strong> —— torch.compile、FSDP、torch.compile 静态优化加持，速度和规模兼备</li>
     </ul>
 </div>
+
+<figure class="teach-fig">
+    <svg viewBox="0 0 620 250" role="img" aria-labelledby="f1-t f1-d">
+        <title id="f1-t">动态图与静态图的执行流程对比</title>
+        <desc id="f1-d">左侧动态图 define-by-run：每写一行 Python 就立即执行并得到结果；右侧静态图 define-and-run：先声明整个计算图，之后在 Session 中运行才能拿到数值。</desc>
+        <g font-family="'PingFang SC','Segoe UI',system-ui,sans-serif">
+            <rect x="10" y="10" width="290" height="230" rx="16" fill="#ecfdf5" stroke="#34d399" stroke-width="2"/>
+            <text x="32" y="42" font-size="17" font-weight="700" fill="#065f46">动态图 define-by-run</text>
+            <rect x="34" y="58" width="242" height="42" rx="10" fill="#ffffff" stroke="#6ee7b7"/>
+            <text x="48" y="84" font-size="14" font-family="monospace" fill="#0f172a">x = a + b   → 立即得到值</text>
+            <rect x="34" y="108" width="242" height="42" rx="10" fill="#ffffff" stroke="#6ee7b7"/>
+            <text x="48" y="134" font-size="14" font-family="monospace" fill="#0f172a">y = x * c   → 立即得到值</text>
+            <rect x="34" y="158" width="242" height="42" rx="10" fill="#ffffff" stroke="#6ee7b7"/>
+            <text x="48" y="184" font-size="14" font-family="monospace" fill="#0f172a">print(y)    → 当场可打印</text>
+            <text x="34" y="226" font-size="13" fill="#047857">调错：在哪一行加 print 都行</text>
+            <rect x="320" y="10" width="290" height="230" rx="16" fill="#fef2f2" stroke="#f87171" stroke-width="2"/>
+            <text x="342" y="42" font-size="17" font-weight="700" fill="#991b1b">静态图 define-and-run</text>
+            <rect x="344" y="58" width="242" height="42" rx="10" fill="#ffffff" stroke="#fca5a5"/>
+            <text x="358" y="84" font-size="14" font-family="monospace" fill="#0f172a">声明 a+b 节点（不计算）</text>
+            <rect x="344" y="108" width="242" height="42" rx="10" fill="#ffffff" stroke="#fca5a5"/>
+            <text x="358" y="134" font-size="14" font-family="monospace" fill="#0f172a">声明 *c 节点（不计算）</text>
+            <rect x="344" y="158" width="242" height="42" rx="10" fill="#ffffff" stroke="#fca5a5"/>
+            <text x="358" y="184" font-size="14" font-family="monospace" fill="#0f172a">Session.run(y) → 此刻才有值</text>
+            <text x="344" y="226" font-size="13" fill="#b91c1c">调错：要插节点重跑整个图</text>
+        </g>
+    </svg>
+    <figcaption>本章的核心对比：PyTorch 采用左侧的<strong>动态图</strong>（define-by-run），代码即执行，中间张量随时可查；TensorFlow 1.x 属于右侧的<strong>静态图</strong>（define-and-run），必须先声明整张图再运行。两者在“何时才能看到数值”上的差别，决定了调试体验的差异。</figcaption>
+</figure>
 
 <h2>深度学习框架简史</h2>
 
@@ -298,6 +335,41 @@ x 的数据类型: torch.float32</code></pre>
 
 <p>看到没？<code>torch.randn</code> 创建一个随机张量，<code>torch.zeros</code> 创建全零张量，加法的语法就是 <code>+</code>，和 NumPy 完全一致。<code>x.to("cuda")</code> 一行代码就把张量搬到了 GPU 上。这就是 PyTorch 的"Pythonic"之处——简单、直观。</p>
 
+<div class="demo" role="group" aria-labelledby="d1-h">
+    <h4 id="d1-h">动手试一试：x + y 的元素级加法</h4>
+    <p style="margin:6px 0;">下面两个 2×2 矩阵与本章示例同构。点击按钮，在浏览器里做等价的逐元素相加（教学示意，不调用真实 PyTorch）。</p>
+    <div class="controls">
+        <button type="button" id="d1-run" aria-pressed="false">运行 x + y</button>
+        <button type="button" id="d1-zero" aria-pressed="false">把 y 清零后相加</button>
+    </div>
+    <div class="out" id="d1-out" aria-live="polite">y 为全零，点击「运行 x + y」查看结果。</div>
+</div>
+<script>
+(function () {
+    var x = [[1, 2], [3, 4]];
+    var out = document.getElementById('d1-out');
+    function fmt(m) {
+        return m.map(function (r) {
+            return '[' + r.map(function (v) { return String(v).padStart(4, ' '); }).join(', ') + ']';
+        }).join('\n         ');
+    }
+    function add(a, b) {
+        return a.map(function (r, i) { return r.map(function (v, j) { return v + b[i][j]; }); });
+    }
+    function render(y, label, z) {
+        out.textContent = label + '\ny = tensor([' + fmt(y) + '])\nx + y = tensor([' + fmt(z) + '])';
+    }
+    document.getElementById('d1-run').addEventListener('click', function () {
+        this.setAttribute('aria-pressed', 'true');
+        render([[10, 20], [30, 40]], '按元素相加，形状不变 (2, 2)：', add(x, [[10, 20], [30, 40]]));
+    });
+    document.getElementById('d1-zero').addEventListener('click', function () {
+        this.setAttribute('aria-pressed', 'true');
+        render([[0, 0], [0, 0]], 'y 全为零，结果等于 x：', add(x, [[0, 0], [0, 0]]));
+    });
+})();
+</script>
+
 <div class="highlight">
     <strong>关于 Tensor 的几个关键点，现在记下来，后面会反复用到：</strong>
     <ul>
@@ -321,7 +393,7 @@ x 的数据类型: torch.float32</code></pre>
             <a href="index.html">📖 返回目录</a>
             <a href="02.html">下一章 →</a>
         </div>
-    </div>
+    </main>
 </div>
 </div>
 </body>
