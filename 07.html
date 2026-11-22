@@ -4,12 +4,21 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.5, user-scalable=yes">
     <title>第7章 完整训练流程 — PyTorch教程</title>
+    <style>
+        body { font-family: system-ui, -apple-system, 'PingFang SC', 'Segoe UI', sans-serif; line-height: 1.8; margin: 0; padding: 12px; }
+        .container, .main-content { min-width: 0; }
+        .main-content { overflow-x: auto; }
+        pre { overflow-x: auto; max-width: 100%; }
+        pre, code { font-family: 'JetBrains Mono', ui-monospace, monospace; }
+        table { max-width: 100%; }
+        img, svg { max-width: 100%; }
+    </style>
     <link rel="stylesheet" href="theme.css">
 </head>
 <body>
 <div class="double-border">
 <div class="container">
-    <div class="sidebar">
+    <nav class="sidebar" aria-label="课程目录">
         <h3>🔥 课程目录</h3>
         <ul class="chapter-list">
             <li><a href="01.html">第1章 初识PyTorch</a></li>
@@ -41,10 +50,10 @@
             <li><a href="27.html">第27章 实战项目：图像分类全流程</a></li>
             <li><a href="28.html">第28章 课程总结与学习路线</a></li>
         </ul>
-    </div>
-    <div class="main-content">
+    </nav>
+    <main class="main-content">
 
-<h2>第7章 完整训练流程</h2>
+<h1>第7章 完整训练流程</h1>
 
 <p>大家好，我是你们的讲师。经过前面六章的积累，我们已经掌握了 PyTorch 的全部核心零件：Tensor、Autograd、nn.Module、损失函数、优化器。现在，是时候把这些零件<strong>组装成一条完整的、可运行的训练流水线</strong>了。</p>
 
@@ -166,6 +175,41 @@ def evaluate(model, dataloader, loss_fn, device):
     </ul>
 </div>
 
+<figure class="teach-fig">
+    <svg viewBox="0 0 620 210" role="img" aria-labelledby="f7-t f7-d">
+        <title id="f7-t">单个训练步骤的五次调用与顺序</title>
+        <desc id="f7-d">每个 batch 依次执行 zero_grad 清空梯度、模型前向、计算损失、loss.backward 反向传播、optimizer.step 更新参数，然后循环到下一个 batch。顺序写错会导致梯度累加或白做。</desc>
+        <defs><marker id="f7-ah" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#0ea5e9"/></marker></defs>
+        <g font-family="'PingFang SC','Segoe UI',system-ui,sans-serif">
+            <text x="10" y="28" font-size="14" font-weight="700" fill="#7c2d12">for inputs, targets in dataloader：</text>
+            <rect x="10" y="50" width="104" height="58" rx="10" fill="#dff0d8" stroke="#7fc47c"/>
+            <text x="62" y="76" font-size="13" font-weight="700" text-anchor="middle" fill="#1f452b">zero_grad()</text>
+            <text x="62" y="96" font-size="11" text-anchor="middle" fill="#3f6b4a">清空梯度</text>
+            <rect x="130" y="50" width="104" height="58" rx="10" fill="#e0f2fe" stroke="#4aa0b0"/>
+            <text x="182" y="76" font-size="13" font-weight="700" text-anchor="middle" fill="#1a3f4a">model(x)</text>
+            <text x="182" y="96" font-size="11" text-anchor="middle" fill="#2c5a66">前向传播</text>
+            <rect x="250" y="50" width="104" height="58" rx="10" fill="#fdf0c4" stroke="#e5b13b"/>
+            <text x="302" y="76" font-size="13" font-weight="700" text-anchor="middle" fill="#5a4410">loss_fn()</text>
+            <text x="302" y="96" font-size="11" text-anchor="middle" fill="#6b5a20">计算损失</text>
+            <rect x="370" y="50" width="104" height="58" rx="10" fill="#fbe0d4" stroke="#f7b07a"/>
+            <text x="422" y="76" font-size="13" font-weight="700" text-anchor="middle" fill="#7a3410">loss.backward()</text>
+            <text x="422" y="96" font-size="11" text-anchor="middle" fill="#7a4a2c">反向传播</text>
+            <rect x="490" y="50" width="104" height="58" rx="10" fill="#e6dcf3" stroke="#a98fd0"/>
+            <text x="542" y="76" font-size="13" font-weight="700" text-anchor="middle" fill="#332a52">step()</text>
+            <text x="542" y="96" font-size="11" text-anchor="middle" fill="#4a4070">更新参数</text>
+            <line x1="116" y1="79" x2="126" y2="79" stroke="#0ea5e9" stroke-width="2" marker-end="url(#f7-ah)"/>
+            <line x1="236" y1="79" x2="246" y2="79" stroke="#0ea5e9" stroke-width="2" marker-end="url(#f7-ah)"/>
+            <line x1="356" y1="79" x2="366" y2="79" stroke="#0ea5e9" stroke-width="2" marker-end="url(#f7-ah)"/>
+            <line x1="476" y1="79" x2="486" y2="79" stroke="#0ea5e9" stroke-width="2" marker-end="url(#f7-ah)"/>
+            <path d="M542 110 L542 150 L62 150 L62 112" fill="none" stroke="#94a3b8" stroke-dasharray="5 4" marker-end="url(#f7-ah)"/>
+            <text x="270" y="145" font-size="12" text-anchor="middle" fill="#64748b">下一个 batch 重复</text>
+            <text x="10" y="180" font-size="12" fill="#64748b">训练时 model.train()；验证/测试改用 model.eval() + torch.no_grad()。</text>
+            <text x="10" y="200" font-size="12" fill="#64748b">顺序必须是 zero_grad → backward → step，不能颠倒。</text>
+        </g>
+    </svg>
+    <figcaption>本章模板中 <code>train_one_epoch</code> 的单个 batch：五步按箭头顺序执行，再沿虚线回到下一个 batch。第 4 章讲的「梯度累加」正是缺少第一步 <code>zero_grad()</code> 的后果。</figcaption>
+</figure>
+
 <h2>model.train() vs model.eval() 的血泪教训</h2>
 
 <p>现在讲一个我亲眼见过的最经典的 bug 之一。</p>
@@ -240,6 +284,39 @@ sanity_check(model, loss_fn, optimizer, device)</code></pre>
 <div class="highlight">
     <strong>我个人的项目管理习惯：</strong>在每个新项目的前几天，我会反复运行这个 sanity check。——在投入大量时间做完整训练之前，先用 2 分钟确认模型和数据通路没问题。这个习惯帮我至少避免了十几次因数据预处理 bug 或模型结构错误而导致的"训练了一天发现 loss 不降"的悲剧。
 </div>
+
+<div class="demo" role="group" aria-labelledby="d7-h">
+    <h4 id="d7-h">动手试一试：跟着训练循环降 loss</h4>
+    <p style="margin:6px 0;">用单个样本 (x=1, 目标 y=3) 拟合 y = wx + b，初始 w=b=0，学习率 0.1。每点一次就执行一轮 zero_grad→前向→loss→backward→step 的等价更新（教学示意，用等价 JS 计算）。</p>
+    <div class="controls">
+        <button type="button" id="d7-step" aria-pressed="false">训练一步</button>
+        <button type="button" id="d7-reset" aria-pressed="false">重置参数</button>
+    </div>
+    <div class="out" id="d7-out" aria-live="polite">第 0 步  w=0.000  b=0.000  loss=9.000</div>
+</div>
+<script>
+(function () {
+    var x = 1, target = 3, lr = 0.1, w = 0, b = 0, step = 0;
+    var out = document.getElementById('d7-out');
+    function render() {
+        var pred = w * x + b, loss = (pred - target) * (pred - target);
+        out.textContent = '第 ' + step + ' 步  w=' + w.toFixed(3) + '  b=' + b.toFixed(3) +
+            '  loss=' + loss.toFixed(3);
+    }
+    document.getElementById('d7-step').addEventListener('click', function () {
+        this.setAttribute('aria-pressed', 'true');
+        var pred = w * x + b;
+        var dw = 2 * (pred - target) * x, db = 2 * (pred - target);
+        w -= lr * dw; b -= lr * db; step += 1;
+        render();
+    });
+    document.getElementById('d7-reset').addEventListener('click', function () {
+        this.setAttribute('aria-pressed', 'true');
+        w = 0; b = 0; step = 0;
+        render();
+    });
+})();
+</script>
 
 <h2>学习率调度器（Scheduler）</h2>
 
@@ -499,7 +576,7 @@ print(tracker.get_last("train", "loss"))  # 0.35</code></pre>
             <a href="index.html">📖 返回目录</a>
             <a href="08.html">下一章 →</a>
         </div>
-    </div>
+    </main>
 </div>
 </div>
 </body>
