@@ -278,20 +278,86 @@
             border-radius: 20px;
             margin: 1rem 0;
         }
+
+        .intro { margin: 0.4rem 0 1.6rem; }
+        .intro h2 {
+            color: #2b6b47; font-size: 1.5rem; margin-bottom: 0.6rem;
+            border-left: 6px solid #7fc47c; padding-left: 14px;
+        }
+        .roadmap { margin: 1rem 0; }
+        .roadmap svg { display: block; background: #fbfdf8; border-radius: 20px; }
+        .roadmap figcaption { font-size: 0.9rem; color: #4a6b52; margin-top: 0.6rem; line-height: 1.75; }
+        .chapter-nav { display: flex; flex-wrap: wrap; gap: 0.5rem; list-style: none; margin: 0.4rem 0 0; padding: 0; }
+        .chapter-nav a {
+            font-size: 0.85rem; text-decoration: none; color: #1f452b;
+            background: #f1f9ee; border: 1px solid #dcebd4; padding: 0.15rem 0.8rem; border-radius: 30px;
+        }
+        .chapter-nav a:hover { background: #f7d44a; border-color: #dbb42c; }
     </style>
 </head>
 <body>
 <div class="container">
-    <div class="header">
-        <h1><span class="emoji"></span><span class="title-text"></span></h1>
-        <div class="sub"></div>
-    </div>
+    <header class="header">
+        <h1><span class="emoji">🔥</span><span class="title-text">PyTorch 深度学习实战教程</span></h1>
+        <div class="sub">28 章 实战体系</div>
+    </header>
+
+    <main>
+    <section class="intro" aria-labelledby="roadmap-h">
+        <h2 id="roadmap-h">从张量到部署：六阶段学习路线</h2>
+        <p>本课程共 28 章，按六个阶段递进：先打牢张量与自动求导的地基，再走通第一个神经网络与数据管线，随后进入 CNN/RNN/注意力、训练调优、性能与分布式，最后落到部署导出与生态前沿。点击下方阶段标签或章节卡片即可开始。</p>
+        <nav class="chapter-nav" aria-label="阶段导航">
+            <a href="01.html">01 入门基础</a>
+            <a href="05.html">05 首个网络</a>
+            <a href="09.html">09 深度学习组件</a>
+            <a href="12.html">12 训练与调优</a>
+            <a href="17.html">17 性能与分布式</a>
+            <a href="23.html">23 部署与生态</a>
+        </nav>
+    </section>
+    <section class="intro" aria-labelledby="roadmap-fig-h">
+        <h2 id="roadmap-fig-h">学习路线总览</h2>
+        <figure class="roadmap">
+            <svg viewBox="0 0 660 340" style="width:100%;max-width:660px;height:auto" role="img" aria-labelledby="rm-t rm-d">
+                <title id="rm-t">PyTorch 教程六阶段学习路线</title>
+                <desc id="rm-d">从入门基础、首个网络、深度学习组件、训练与调优、性能与分布式到部署与生态的六个递进阶段，覆盖第 01 至 28 章。</desc>
+                <defs><marker id="rm-ah" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#9db8a0"/></marker></defs>
+                <g font-family="'PingFang SC','Segoe UI',system-ui,sans-serif">
+                    <rect x="20" y="20" width="300" height="88" rx="18" fill="#dff0d8" stroke="#7fc47c" stroke-width="2"/>
+                    <text x="44" y="58" font-size="20" font-weight="700" fill="#1f452b">01–04 入门基础</text>
+                    <text x="44" y="86" font-size="14" fill="#3f6b4a">框架 · 张量 · 运算广播 · 自动求导</text>
+                    <rect x="340" y="20" width="300" height="88" rx="18" fill="#fdf0c4" stroke="#e5b13b" stroke-width="2"/>
+                    <text x="364" y="58" font-size="20" font-weight="700" fill="#5a4410">05–08 首个网络</text>
+                    <text x="364" y="86" font-size="14" fill="#6b5a20">nn.Module · 损失优化 · 训练循环 · 数据加载</text>
+                    <rect x="20" y="126" width="300" height="88" rx="18" fill="#d7ecf5" stroke="#4aa0b0" stroke-width="2"/>
+                    <text x="44" y="164" font-size="20" font-weight="700" fill="#1a3f4a">09–11 深度学习组件</text>
+                    <text x="44" y="192" font-size="14" fill="#2c5a66">CNN · RNN/注意力 · 保存与加载</text>
+                    <rect x="340" y="126" width="300" height="88" rx="18" fill="#fbe0d4" stroke="#f7b07a" stroke-width="2"/>
+                    <text x="364" y="164" font-size="20" font-weight="700" fill="#7a3410">12–16 训练与调优</text>
+                    <text x="364" y="192" font-size="14" fill="#7a4a2c">调参 · 评估可视化 · 迁移 · 混合精度 · 调试</text>
+                    <rect x="20" y="232" width="300" height="88" rx="18" fill="#e6dcf3" stroke="#a98fd0" stroke-width="2"/>
+                    <text x="44" y="270" font-size="20" font-weight="700" fill="#332a52">17–22 性能与分布式</text>
+                    <text x="44" y="298" font-size="14" fill="#4a4070">性能 · 可复现 · compile · 算子 · DDP/FSDP</text>
+                    <rect x="340" y="232" width="300" height="88" rx="18" fill="#fbd8d8" stroke="#e08a8a" stroke-width="2"/>
+                    <text x="364" y="270" font-size="20" font-weight="700" fill="#5a2e2e">23–28 部署与生态</text>
+                    <text x="364" y="298" font-size="14" fill="#6b3a3a">导出部署 · profiling · 生态 · 前沿 · 实战</text>
+                    <line x1="322" y1="64" x2="338" y2="64" stroke="#9db8a0" stroke-width="2" marker-end="url(#rm-ah)"/>
+                    <line x1="490" y1="110" x2="170" y2="124" stroke="#9db8a0" stroke-width="2" marker-end="url(#rm-ah)"/>
+                    <line x1="322" y1="170" x2="338" y2="170" stroke="#9db8a0" stroke-width="2" marker-end="url(#rm-ah)"/>
+                    <line x1="490" y1="216" x2="170" y2="230" stroke="#9db8a0" stroke-width="2" marker-end="url(#rm-ah)"/>
+                    <line x1="322" y1="276" x2="338" y2="276" stroke="#9db8a0" stroke-width="2" marker-end="url(#rm-ah)"/>
+                </g>
+            </svg>
+            <figcaption>六个阶段沿箭头递进：01–04 打地基，05–08 搭起第一套训练循环，09–16 扩展组件与调优，17–28 走向性能、分布式与部署。阶段划分与 <code>courses.json</code> 中的章节目录一致。</figcaption>
+        </figure>
+    </section>
 
     <div id="cardContainer" class="course-grid"></div>
 
     <div style="text-align:center;">
         <div class="footer"></div>
     </div>
+    </main>
 </div>
 
 <script>
@@ -373,8 +439,40 @@
 
 <noscript>
     <div style="background:#fcf0d9; padding:1rem; border-radius:20px; text-align:center; color:#92400e;">
-        请启用 JavaScript 以浏览课程目录。
+        当前浏览器未启用 JavaScript，下方为完整章节列表，可直接点击进入。
     </div>
+    <nav aria-label="全部章节">
+        <ul class="chapter-nav">
+            <li><a href="01.html">01 初识PyTorch</a></li>
+            <li><a href="02.html">02 张量操作基础</a></li>
+            <li><a href="03.html">03 张量运算与广播</a></li>
+            <li><a href="04.html">04 自动求导机制</a></li>
+            <li><a href="05.html">05 构建第一个神经网络</a></li>
+            <li><a href="06.html">06 损失函数与优化器</a></li>
+            <li><a href="07.html">07 完整训练流程</a></li>
+            <li><a href="08.html">08 数据加载与预处理</a></li>
+            <li><a href="09.html">09 卷积神经网络</a></li>
+            <li><a href="10.html">10 循环神经网络与注意力</a></li>
+            <li><a href="11.html">11 模型保存与加载</a></li>
+            <li><a href="12.html">12 训练技巧与调参</a></li>
+            <li><a href="13.html">13 模型评估与可视化</a></li>
+            <li><a href="14.html">14 迁移学习</a></li>
+            <li><a href="15.html">15 混合精度训练</a></li>
+            <li><a href="16.html">16 训练陷阱与调试</a></li>
+            <li><a href="17.html">17 性能优化基础</a></li>
+            <li><a href="18.html">18 可复现性与实验管理</a></li>
+            <li><a href="19.html">19 torch.compile深度解析</a></li>
+            <li><a href="20.html">20 自定义层与算子</a></li>
+            <li><a href="21.html">21 分布式训练入门</a></li>
+            <li><a href="22.html">22 FSDP与大模型训练</a></li>
+            <li><a href="23.html">23 模型部署与导出</a></li>
+            <li><a href="24.html">24 Profiling与性能分析</a></li>
+            <li><a href="25.html">25 PyTorch生态系统</a></li>
+            <li><a href="26.html">26 PyTorch前沿发展</a></li>
+            <li><a href="27.html">27 实战项目：图像分类</a></li>
+            <li><a href="28.html">28 课程总结与学习路线</a></li>
+        </ul>
+    </nav>
 </noscript>
 </body>
 </html>
