@@ -4,12 +4,21 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.5, user-scalable=yes">
     <title>第9章 卷积神经网络 — PyTorch教程</title>
+    <style>
+        body { font-family: system-ui, -apple-system, 'PingFang SC', 'Segoe UI', sans-serif; line-height: 1.8; margin: 0; padding: 12px; }
+        .container, .main-content { min-width: 0; }
+        .main-content { overflow-x: auto; }
+        pre { overflow-x: auto; max-width: 100%; }
+        pre, code { font-family: 'JetBrains Mono', ui-monospace, monospace; }
+        table { max-width: 100%; }
+        img, svg { max-width: 100%; }
+    </style>
     <link rel="stylesheet" href="theme.css">
 </head>
 <body>
 <div class="double-border">
 <div class="container">
-    <div class="sidebar">
+    <nav class="sidebar" aria-label="课程目录">
         <h3>🔥 课程目录</h3>
         <ul class="chapter-list">
             <li><a href="01.html">第1章 初识PyTorch</a></li>
@@ -41,10 +50,10 @@
             <li><a href="27.html">第27章 实战项目：图像分类全流程</a></li>
             <li><a href="28.html">第28章 课程总结与学习路线</a></li>
         </ul>
-    </div>
-    <div class="main-content">
+    </nav>
+    <main class="main-content">
 
-<h2>第9章 卷积神经网络</h2>
+<h1>第9章 卷积神经网络</h1>
 
 <p>大家好，我是你们的讲师。欢迎回来。</p>
 
@@ -52,7 +61,7 @@
 
 <p>你可能觉得 CNN 在 2026 年已经是"老古董"了——Transformer 不是已经接管一切了吗？但实际上，CNN 远没有过时。在移动端推理、嵌入式设备、实时视频处理等领域，CNN 凭借其高效的局部计算特性依然是标准选择。而且在很多 ViT 模型中，ConvNeXt 等结构证明 CNN 和 Transformer 的融合才是当前的最优解。这一章，我们从最本质的角度来理解卷积。</p>
 
-<h3>9.1 卷积的本质：模式匹配</h3>
+<h2>9.1 卷积的本质：模式匹配</h2>
 
 <p>从直观上理解，卷积层做的事情其实很简单——<strong>用一个小窗口在图像上滑动，在每个位置检测有没有某种"模式"</strong>。</p>
 
@@ -76,7 +85,35 @@ kernel_v = torch.tensor([
 
 <p>这就是卷积的核心直觉：<strong>一组可学习的卷积核，每个核负责检测一种特定的局部模式</strong>——边缘、纹理、角落、颜色渐变……浅层检测简单模式，深层组合成复杂模式。在 PyTorch 中，<code>nn.Conv2d</code> 就是用来做这件事的，只不过卷积核的值不是手工设计的，而是通过反向传播自动学习的。</p>
 
-<h3>9.2 Conv2d 参数详解</h3>
+<figure class="teach-fig">
+    <svg viewBox="0 0 620 260" role="img" aria-labelledby="f9-t f9-d">
+        <title id="f9-t">3×3 卷积核在 5×5 输入上滑动得到 3×3 输出</title>
+        <desc id="f9-d">步长为 1、无填充时，3×3 的卷积核在 5×5 输入上从左到右、从上到下逐位滑动，每个位置做逐元素乘积求和，共得到 3×3 个输出值。橙色窗口表示当前覆盖的 3×3 区域。</desc>
+        <defs><marker id="f9-ah" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#ea580c"/></marker></defs>
+        <g font-family="'PingFang SC','Segoe UI',system-ui,sans-serif">
+            <text x="20" y="42" font-size="13" font-weight="700" fill="#7c2d12">输入 5×5</text>
+            <rect x="20" y="50" width="150" height="150" fill="#fff7ed" stroke="#c2410c"/>
+            <line x1="50" y1="50" x2="50" y2="200" stroke="#fed7aa"/><line x1="80" y1="50" x2="80" y2="200" stroke="#fed7aa"/><line x1="110" y1="50" x2="110" y2="200" stroke="#fed7aa"/><line x1="140" y1="50" x2="140" y2="200" stroke="#fed7aa"/>
+            <line x1="20" y1="80" x2="170" y2="80" stroke="#fed7aa"/><line x1="20" y1="110" x2="170" y2="110" stroke="#fed7aa"/><line x1="20" y1="140" x2="170" y2="140" stroke="#fed7aa"/><line x1="20" y1="170" x2="170" y2="170" stroke="#fed7aa"/>
+            <rect x="20" y="50" width="90" height="90" fill="#f7b07a" fill-opacity="0.45" stroke="#ea580c" stroke-width="2"/>
+            <text x="230" y="42" font-size="13" font-weight="700" fill="#1f452b">卷积核 3×3</text>
+            <rect x="230" y="65" width="90" height="90" fill="#dff0d8" stroke="#7fc47c"/>
+            <line x1="260" y1="65" x2="260" y2="155" stroke="#a7d4a0"/><line x1="290" y1="65" x2="290" y2="155" stroke="#a7d4a0"/>
+            <line x1="230" y1="95" x2="320" y2="95" stroke="#a7d4a0"/><line x1="230" y1="125" x2="320" y2="125" stroke="#a7d4a0"/>
+            <text x="400" y="57" font-size="13" font-weight="700" fill="#1a3f4a">输出 3×3</text>
+            <rect x="400" y="65" width="90" height="90" fill="#e0f2fe" stroke="#4aa0b0"/>
+            <line x1="430" y1="65" x2="430" y2="155" stroke="#9cc9d6"/><line x1="460" y1="65" x2="460" y2="155" stroke="#9cc9d6"/>
+            <line x1="400" y1="95" x2="490" y2="95" stroke="#9cc9d6"/><line x1="400" y1="125" x2="490" y2="125" stroke="#9cc9d6"/>
+            <line x1="174" y1="110" x2="226" y2="110" stroke="#ea580c" stroke-width="2" marker-end="url(#f9-ah)"/>
+            <line x1="324" y1="110" x2="396" y2="110" stroke="#ea580c" stroke-width="2" marker-end="url(#f9-ah)"/>
+            <text x="20" y="228" font-size="13" fill="#7c2d12">输出边长 = floor((5 + 2×0 − 3) / 1) + 1 = 3</text>
+            <text x="20" y="250" font-size="12" fill="#64748b">步长 stride=1、无填充 padding=0；每个输出位置都是核与覆盖区域的逐元素乘积之和。</text>
+        </g>
+    </svg>
+    <figcaption>卷积的核心操作：3×3 核在 5×5 输入上滑动，橙色框是当前窗口，每个窗口算出一个数，最终得到 3×3 的特征图。这正是 <code>nn.Conv2d</code> 内部做的事，只是核的数值由反向传播学得，而非手工设定。</figcaption>
+</figure>
+
+<h2>9.2 Conv2d 参数详解</h2>
 
 <pre><code>import torch.nn as nn
 
@@ -136,7 +173,34 @@ conv = nn.Conv2d(
     <strong>输出尺寸计算公式：</strong>输出高度 = floor((输入高度 + 2×padding - kernel_size) / stride + 1)，宽度同理。这是一个很实用的公式——每次设计网络时先算一下，确保尺寸是整数，否则会报错。
 </div>
 
-<h3>9.3 池化层（Pooling）</h3>
+<div class="demo" role="group" aria-labelledby="d9-h">
+    <h4 id="d9-h">动手试一试：Conv2d 输出尺寸计算器</h4>
+    <p style="margin:6px 0;">公式：out = floor((H + 2×padding − kernel) / stride) + 1。点击预设查看结果（教学示意，用等价 JS 计算）。</p>
+    <div class="controls">
+        <button type="button" data-h="32" data-k="3" data-s="1" data-p="1" aria-pressed="false">32×32, k3 s1 p1</button>
+        <button type="button" data-h="32" data-k="3" data-s="2" data-p="1" aria-pressed="false">32×32, k3 s2 p1</button>
+        <button type="button" data-h="224" data-k="7" data-s="2" data-p="3" aria-pressed="false">224×224, k7 s2 p3</button>
+    </div>
+    <div class="out" id="d9-out" aria-live="polite">点击任意预设查看输出尺寸。</div>
+</div>
+<script>
+(function () {
+    var out = document.getElementById('d9-out');
+    var btns = document.querySelectorAll('.demo [data-h]');
+    btns.forEach(function (btn) {
+        btn.addEventListener('click', function () {
+            btns.forEach(function (o) { o.setAttribute('aria-pressed', 'false'); });
+            btn.setAttribute('aria-pressed', 'true');
+            var H = +btn.dataset.h, k = +btn.dataset.k, s = +btn.dataset.s, p = +btn.dataset.p;
+            var o = Math.floor((H + 2 * p - k) / s) + 1;
+            out.textContent = H + '×' + H + '  kernel ' + k + '  stride ' + s + '  padding ' + p +
+                '\n→ out = floor((' + H + ' + 2×' + p + ' − ' + k + ') / ' + s + ') + 1 = ' + o + '×' + o;
+        });
+    });
+})();
+</script>
+
+<h2>9.3 池化层（Pooling）</h2>
 
 <p>池化层的目的是缩小特征图的空间尺寸，同时保留最重要的信息。它就像一个"信息浓缩器"：</p>
 
@@ -158,7 +222,7 @@ adaptive_pool = nn.AdaptiveAvgPool2d((1, 1))
 
 <p>AdaptivePool 的妙处在于：它让你的网络可以接受任意尺寸的输入图像。你不需要在输入层强制 resize 到固定大小，AdaptivePool 自动帮你解决这个尺寸不一致的问题。</p>
 
-<h3>9.4 BatchNorm2d：训练的稳定器</h3>
+<h2>9.4 BatchNorm2d：训练的稳定器</h2>
 
 <p>BatchNorm（批归一化）是 CNN 训练中不可或缺的一环。它的核心思想很简单：<strong>把每一层的输出拉回到均值为 0、方差为 1 的标准分布</strong>。</p>
 
@@ -199,7 +263,7 @@ output = bn(conv_input)
     <strong>极其常见的 Bug：</strong>很多人训练完模型后，忘记调用 <code>model.eval()</code> 就做推理。此时 BatchNorm 仍然使用当前 batch 的统计量——如果 batch_size 很小（比如 1），那么均值和方差就是这张图片自身的统计量，毫无意义。结果就是：训练时 loss 正常，推理结果却一团糟。
 </div>
 
-<h3>9.5 关于 BN 和 ReLU 的顺序</h3>
+<h2>9.5 关于 BN 和 ReLU 的顺序</h2>
 
 <p>这里有一个很多初学者会纠结的问题：<strong>Conv → BN → ReLU，还是 Conv → ReLU → BN？</strong></p>
 
@@ -221,7 +285,7 @@ def forward(self, x):
     这个顺序不是随意定的，背后有数学原因——BN 应该操作在激活函数的"输入空间"而不是"输出空间"上。这是经典论文《Batch Normalization: Accelerating Deep Network Training by Reducing Internal Covariate Shift》中的一个关键设计选择。
 </div>
 
-<h3>9.6 简单 CNN 架构设计</h3>
+<h2>9.6 简单 CNN 架构设计</h2>
 
 <p>现在我们把所有组件组合成一个经典的 CNN 架构。以下是一个类 LeNet 风格的设计：</p>
 
@@ -261,7 +325,7 @@ def forward(self, x):
 
 <p>这个架构的特征提取部分遵循经典的"卷积→池化"交替模式：每经过一组卷积，特征图的通道数增加（从 3 到 32 到 64 到 128），空间尺寸减半（从 32x32 到 16x16 到 8x8 到 4x4）。分类器部分用 AdaptiveAvgPool 把一个变尺寸的特征图压缩到 1x1，再展平后接全连接层输出分类结果。</p>
 
-<h3>9.7 特征图可视化：理解 CNN 在看什么</h3>
+<h2>9.7 特征图可视化：理解 CNN 在看什么</h2>
 
 <p>一个经常被问到的问题是：<strong>CNN 的每一层到底学到了什么？</strong>答案是：浅层学的是边缘和纹理（Gabor 滤波器状的图案），中层学的是形状和部件（眼睛、轮子、窗户），深层学的是完整语义概念（人脸、汽车、建筑）。</p>
 
@@ -289,7 +353,7 @@ feature_maps = activation['conv1']  # shape: [1, 32, 32, 32]
         <a href="index.html">📖 返回目录</a>
         <a href="10.html">下一章 →</a>
     </div>
-    </div>
+    </main>
 </div>
 </div>
 </body>
