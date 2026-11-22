@@ -4,12 +4,21 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.5, user-scalable=yes">
     <title>第5章 构建第一个神经网络 — PyTorch教程</title>
+    <style>
+        body { font-family: system-ui, -apple-system, 'PingFang SC', 'Segoe UI', sans-serif; line-height: 1.8; margin: 0; padding: 12px; }
+        .container, .main-content { min-width: 0; }
+        .main-content { overflow-x: auto; }
+        pre { overflow-x: auto; max-width: 100%; }
+        pre, code { font-family: 'JetBrains Mono', ui-monospace, monospace; }
+        table { max-width: 100%; }
+        img, svg { max-width: 100%; }
+    </style>
     <link rel="stylesheet" href="theme.css">
 </head>
 <body>
 <div class="double-border">
 <div class="container">
-    <div class="sidebar">
+    <nav class="sidebar" aria-label="课程目录">
         <h3>🔥 课程目录</h3>
         <ul class="chapter-list">
             <li><a href="01.html">第1章 初识PyTorch</a></li>
@@ -41,10 +50,10 @@
             <li><a href="27.html">第27章 实战项目：图像分类全流程</a></li>
             <li><a href="28.html">第28章 课程总结与学习路线</a></li>
         </ul>
-    </div>
-    <div class="main-content">
+    </nav>
+    <main class="main-content">
 
-<h2>第5章 构建第一个神经网络</h2>
+<h1>第5章 构建第一个神经网络</h1>
 
 <p>大家好，我是你们的讲师。在前面四章，我们已经打下了坚实的基础：你会创建 Tensor，会做各种运算，还知道梯度是怎么自动算出来的。现在是时候用这些知识来<strong>构建我们的第一个神经网络</strong>了。</p>
 
@@ -278,6 +287,35 @@ class SimpleMLP(nn.Module):
     <strong>一个常见的误区：</strong>不要在输出层使用 ReLU！如果你在做分类任务，输出层应该使用 <code>Softmax</code>（多分类）或 <code>Sigmoid</code>（二分类），或者直接不加激活而让 <code>CrossEntropyLoss</code> 内部处理。如果误在输出层加了 ReLU，负数类别就被截断为 0，模型永远学不会那些类别。
 </div>
 
+<figure class="teach-fig">
+    <svg viewBox="0 0 620 200" role="img" aria-labelledby="f5-t f5-d">
+        <title id="f5-t">MLP 前向传播的形状流</title>
+        <desc id="f5-d">一个批次 32 个样本、每个 784 维，依次经过 Linear(784→256)+ReLU、Linear(256→128)+ReLU、Linear(128→10) 后得到 [32,10] 的输出。每个线性层把最后一维从 in_features 变为 out_features，批次维不变。</desc>
+        <defs><marker id="f5-ah" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#0ea5e9"/></marker></defs>
+        <g font-family="'PingFang SC','Segoe UI',system-ui,sans-serif">
+            <text x="10" y="30" font-size="14" font-weight="700" fill="#7c2d12">直筒结构：形状沿最后一维变化，批次维不变</text>
+            <rect x="10" y="70" width="130" height="64" rx="12" fill="#e0f2fe" stroke="#4aa0b0"/>
+            <text x="75" y="98" font-size="14" font-weight="700" text-anchor="middle" fill="#1a3f4a">输入 x</text>
+            <text x="75" y="120" font-size="13" text-anchor="middle" fill="#2c5a66">[32, 784]</text>
+            <rect x="170" y="70" width="130" height="64" rx="12" fill="#dff0d8" stroke="#7fc47c"/>
+            <text x="235" y="98" font-size="13" font-weight="700" text-anchor="middle" fill="#1f452b">Linear 784→256</text>
+            <text x="235" y="120" font-size="13" text-anchor="middle" fill="#3f6b4a">+ ReLU</text>
+            <rect x="330" y="70" width="130" height="64" rx="12" fill="#dff0d8" stroke="#7fc47c"/>
+            <text x="395" y="98" font-size="13" font-weight="700" text-anchor="middle" fill="#1f452b">Linear 256→128</text>
+            <text x="395" y="120" font-size="13" text-anchor="middle" fill="#3f6b4a">+ ReLU</text>
+            <rect x="490" y="70" width="120" height="64" rx="12" fill="#fbe0d4" stroke="#f7b07a"/>
+            <text x="550" y="98" font-size="13" font-weight="700" text-anchor="middle" fill="#7a3410">Linear 128→10</text>
+            <text x="550" y="120" font-size="13" text-anchor="middle" fill="#7a4a2c">[32, 10]</text>
+            <line x1="142" y1="102" x2="166" y2="102" stroke="#0ea5e9" stroke-width="2" marker-end="url(#f5-ah)"/>
+            <line x1="302" y1="102" x2="326" y2="102" stroke="#0ea5e9" stroke-width="2" marker-end="url(#f5-ah)"/>
+            <line x1="462" y1="102" x2="486" y2="102" stroke="#0ea5e9" stroke-width="2" marker-end="url(#f5-ah)"/>
+            <text x="10" y="170" font-size="12" fill="#64748b">每个 Linear 内部：y = xWᵀ + b，W 形状为 [out, in]、b 形状为 [out]。</text>
+            <text x="10" y="190" font-size="12" fill="#64748b">ReLU 逐元素作用，不改变形状。</text>
+        </g>
+    </svg>
+    <figcaption>用 <code>nn.Sequential</code> 搭建的直筒 MLP：批次维 32 全程不变，最后一维依次从 784 → 256 → 128 → 10（即类别数）。这正是本章 <code>model = nn.Sequential(nn.Linear(784,256), nn.ReLU(), ...)</code> 示例中形状变化的完整链路。</figcaption>
+</figure>
+
 <h2>nn.Sequential：快速堆叠网络</h2>
 
 <p>当你的网络是一连串顺序执行的层时，<code>nn.Sequential</code> 能让代码更简洁。它就是把积木按顺序拼起来：</p>
@@ -317,6 +355,35 @@ print(out.shape)  # torch.Size([32, 10])
         <li>大多数实际项目会混合使用两者——主体结构定义的类中，某些子模块用 Sequential</li>
     </ul>
 </div>
+
+<div class="demo" role="group" aria-labelledby="d5-h">
+    <h4 id="d5-h">动手试一试：nn.Linear 的形状与参数量</h4>
+    <p style="margin:6px 0;">固定一个批次 x 形状 [32, in]，点击不同层，查看 weight / bias / 输出形状与参数量（教学示意，用等价 JS 计算）。</p>
+    <div class="controls">
+        <button type="button" data-in="784" data-out="256" aria-pressed="false">Linear(784, 256)</button>
+        <button type="button" data-in="256" data-out="128" aria-pressed="false">Linear(256, 128)</button>
+        <button type="button" data-in="128" data-out="10" aria-pressed="false">Linear(128, 10)</button>
+    </div>
+    <div class="out" id="d5-out" aria-live="polite">点击任意一层查看结果。</div>
+</div>
+<script>
+(function () {
+    var out = document.getElementById('d5-out');
+    var btns = document.querySelectorAll('.demo [data-in]');
+    btns.forEach(function (btn) {
+        btn.addEventListener('click', function () {
+            btns.forEach(function (o) { o.setAttribute('aria-pressed', 'false'); });
+            btn.setAttribute('aria-pressed', 'true');
+            var i = +btn.dataset.in, o = +btn.dataset.out, params = o * i + o;
+            out.textContent = 'nn.Linear(' + i + ', ' + o + ')' +
+                '\nweight: [' + o + ', ' + i + ']' +
+                '\nbias:   [' + o + ']' +
+                '\nx: [32, ' + i + ']  →  out: [32, ' + o + ']' +
+                '\n参数量: ' + o + '×' + i + ' + ' + o + ' = ' + params.toLocaleString('en-US');
+        });
+    });
+})();
+</script>
 
 <h2>model(x) vs model.forward(x) 的故事</h2>
 
@@ -420,7 +487,7 @@ print(f"真实值:   w={true_w:.4f}, b={true_b:.4f}")</code></pre>
             <a href="index.html">📖 返回目录</a>
             <a href="06.html">下一章 →</a>
         </div>
-    </div>
+    </main>
 </div>
 </div>
 </body>
