@@ -4,12 +4,21 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.5, user-scalable=yes">
     <title>第11章 模型保存与加载 — PyTorch教程</title>
+    <style>
+        body { font-family: system-ui, -apple-system, 'PingFang SC', 'Segoe UI', sans-serif; line-height: 1.8; margin: 0; padding: 12px; }
+        .container, .main-content { min-width: 0; }
+        .main-content { overflow-x: auto; }
+        pre { overflow-x: auto; max-width: 100%; }
+        pre, code { font-family: 'JetBrains Mono', ui-monospace, monospace; }
+        table { max-width: 100%; }
+        img, svg { max-width: 100%; }
+    </style>
     <link rel="stylesheet" href="theme.css">
 </head>
 <body>
 <div class="double-border">
 <div class="container">
-    <div class="sidebar">
+    <nav class="sidebar" aria-label="课程目录">
         <h3>🔥 课程目录</h3>
         <ul class="chapter-list">
             <li><a href="01.html">第1章 初识PyTorch</a></li>
@@ -41,10 +50,10 @@
             <li><a href="27.html">第27章 实战项目：图像分类全流程</a></li>
             <li><a href="28.html">第28章 课程总结与学习路线</a></li>
         </ul>
-    </div>
-    <div class="main-content">
+    </nav>
+    <main class="main-content">
 
-<h2>第11章 模型保存与加载</h2>
+<h1>第11章 模型保存与加载</h1>
 
 <p>大家好，我是你们的讲师。</p>
 
@@ -52,7 +61,7 @@
 
 <p>2019 年，我参加 Kaggle 的一个比赛，训练了整整 72 小时，模型在验证集上达到了当时的最优成绩。我随手用 <code>torch.save(model, 'model.pth')</code> 保存了模型，然后心满意足地去睡觉。第二天起来想继续训练——发现模型加载后完全没办法接着训练，因为优化器的状态和 epoch 信息都没保存。更要命的是，我保存模型的那个环境有 GPU，但我当天想在一台新机器上做推断，那台机器只有 CPU——结果一加载就报 CUDA 错误。这个故事告诉我们：<strong>模型保存不是存个 .pth 文件那么简单</strong>。这一章我们来系统性地解决这些问题。</p>
 
-<h3>11.1 state_dict() vs 完整模型保存</h3>
+<h2>11.1 state_dict() vs 完整模型保存</h2>
 
 <p>PyTorch 提供了两种保存方式，适用场景完全不同：</p>
 
@@ -106,11 +115,39 @@ model.load_state_dict(torch.load('model_state.pth'))</code></pre>
     </tbody>
 </table>
 
+<div class="demo" role="group" aria-labelledby="d11-h">
+    <h4 id="d11-h">动手试一试：state_dict 到底占多少空间</h4>
+    <p style="margin:6px 0;">一个两层 MLP：<code>Linear(784→128) + Linear(128→10)</code>。参数量 = (784×128+128) + (128×10+10) = 101770。选一个精度看权重体积（教学示意：仅计参数，不含缓存与元数据）。</p>
+    <div class="controls">
+        <button type="button" data-bytes="4" aria-pressed="false">fp32 (4 B)</button>
+        <button type="button" data-bytes="2" aria-pressed="false">fp16 (2 B)</button>
+        <button type="button" data-bytes="1" aria-pressed="false">int8 (1 B)</button>
+    </div>
+    <div class="out" id="d11-out" aria-live="polite">选择一个精度查看体积。</div>
+</div>
+<script>
+(function () {
+    var out = document.getElementById('d11-out');
+    var params = (784 * 128 + 128) + (128 * 10 + 10);
+    var btns = document.querySelectorAll('.demo [data-bytes]');
+    btns.forEach(function (btn) {
+        btn.addEventListener('click', function () {
+            btns.forEach(function (o) { o.setAttribute('aria-pressed', 'false'); });
+            btn.setAttribute('aria-pressed', 'true');
+            var b = +btn.dataset.bytes, bytes = params * b;
+            var mib = bytes / (1024 * 1024);
+            out.textContent = '参数量 = ' + params.toLocaleString() + '\n' +
+                '每参数 ' + b + ' 字节 → ' + bytes.toLocaleString() + ' 字节 ≈ ' + mib.toFixed(2) + ' MiB';
+        });
+    });
+})();
+</script>
+
 <div class="warning">
     <strong>永远不要在正式项目中使用完整模型保存。</strong>完整模型使用 Python 的 pickle 序列化，它保存的是 Python class 的引用路径。一旦你修改了模型代码（改了类名、换了目录），之前保存的权重就无法加载了。更严重的是，pickle 格式存在安全风险——恶意的 .pth 文件可以在你加载时执行任意代码（我们稍后会讲到 <code>weights_only=True</code>）。
 </div>
 
-<h3>11.2 检查点（Checkpoint）设计模式</h3>
+<h2>11.2 检查点（Checkpoint）设计模式</h2>
 
 <p>在正式的训练项目中，一个 checkpoint 应该包含所有需要恢复训练的信息。标准模式是把所有状态打包成一个字典：</p>
 
@@ -128,6 +165,35 @@ def save_checkpoint(model, optimizer, scheduler, epoch, loss, filepath):
     }
     torch.save(checkpoint, filepath)
     print(f"Checkpoint saved at epoch {epoch}, loss={loss:.4f}")</code></pre>
+
+<figure class="teach-fig">
+    <svg viewBox="0 0 620 210" role="img" aria-labelledby="f11-t f11-d">
+        <title id="f11-t">一个 checkpoint 字典包含的状态组件</title>
+        <desc id="f11-d">中央的 checkpoint.pt 是一个字典，包含 model_state_dict、optimizer_state_dict、scheduler_state_dict、epoch 与 loss 等条目；逐步加载它们才能从中断处无差恢复训练。</desc>
+        <g font-family="'PingFang SC','Segoe UI',system-ui,sans-serif">
+            <line x1="310" y1="84" x2="310" y2="60" stroke="#94a3b8"/>
+            <line x1="310" y1="112" x2="210" y2="90" stroke="#94a3b8"/>
+            <line x1="310" y1="112" x2="210" y2="150" stroke="#94a3b8"/>
+            <line x1="310" y1="112" x2="410" y2="90" stroke="#94a3b8"/>
+            <line x1="310" y1="112" x2="410" y2="150" stroke="#94a3b8"/>
+            <rect x="232" y="84" width="156" height="56" rx="10" fill="#fff7ed" stroke="#c2410c" stroke-width="2"/>
+            <text x="310" y="108" font-size="13" font-weight="700" fill="#7c2d12" text-anchor="middle">checkpoint.pt</text>
+            <text x="310" y="128" font-size="11" fill="#9a3412" text-anchor="middle">{ ... } 一个字典</text>
+            <rect x="232" y="14" width="156" height="34" rx="8" fill="#e0f2fe" stroke="#0284c7"/>
+            <text x="310" y="36" font-size="12" fill="#075985" text-anchor="middle">model_state_dict</text>
+            <rect x="20" y="72" width="180" height="34" rx="8" fill="#ecfdf5" stroke="#16a34a"/>
+            <text x="110" y="94" font-size="12" fill="#166534" text-anchor="middle">optimizer_state_dict</text>
+            <rect x="420" y="72" width="180" height="34" rx="8" fill="#fef9c3" stroke="#ca8a04"/>
+            <text x="510" y="94" font-size="12" fill="#854d0e" text-anchor="middle">scheduler_state_dict</text>
+            <rect x="80" y="132" width="120" height="34" rx="8" fill="#f1f5f9" stroke="#64748b"/>
+            <text x="140" y="154" font-size="12" fill="#334155" text-anchor="middle">epoch</text>
+            <rect x="420" y="132" width="120" height="34" rx="8" fill="#f1f5f9" stroke="#64748b"/>
+            <text x="480" y="154" font-size="12" fill="#334155" text-anchor="middle">loss</text>
+            <text x="310" y="192" font-size="11" fill="#64748b" text-anchor="middle">缺失任何一项，都无法从中断处无差恢复训练</text>
+        </g>
+    </svg>
+    <figcaption>checkpoint 的结构：模型权重只是其中一项。要"无差恢复"，优化器与调度器的内部状态（如 Adam 的一阶/二阶动量、学习率计数）也必须一起保存；<code>epoch</code>/<code>loss</code> 则用于决定从哪里继续、何时覆盖"最佳"快照。</figcaption>
+</figure>
 
 <p>加载时，你可以从 checkpoint 中恢复全部训练状态：</p>
 
@@ -155,7 +221,7 @@ def save_checkpoint(model, optimizer, scheduler, epoch, loss, filepath):
         save_checkpoint(model, optimizer, scheduler, epoch, loss,
                         f"{base_dir}/checkpoint_epoch_{epoch:03d}.pt")</code></pre>
 
-<h3>11.3 map_location：跨设备加载</h3>
+<h2>11.3 map_location：跨设备加载</h2>
 
 <p>上面的"踩坑"故事里，那个在 CPU 机器上加载 GPU 模型的惨痛经历，实际上有一个标准解决方案——<code>map_location</code> 参数：</p>
 
@@ -210,7 +276,7 @@ checkpoint = torch.load('checkpoint.pt',
     </tbody>
 </table>
 
-<h3>11.4 weights_only=True 与安全</h3>
+<h2>11.4 weights_only=True 与安全</h2>
 
 <p>2023 年，安全研究人员发现了一个令人不安的事实：<strong>恶意的 .pth 文件可以利用 pickle 的任意代码执行漏洞，在加载模型时植入病毒</strong>。攻击者可以训练一个完全正常的模型，但在保存时通过特殊的 pickle 操作插入恶意代码。你加载这个模型时，恶意代码就会被执行。</p>
 
@@ -232,7 +298,7 @@ checkpoint = torch.load('model.pth', weights_only=True)
     </ul>
 </div>
 
-<h3>11.5 版本兼容性陷阱</h3>
+<h2>11.5 版本兼容性陷阱</h2>
 
 <p>PyTorch 不同版本之间保存的权重文件可能不兼容。这是一个容易被忽视的问题：</p>
 
@@ -258,7 +324,7 @@ checkpoint = torch.load('model.pth', weights_only=True)
         <a href="index.html">📖 返回目录</a>
         <a href="12.html">下一章 →</a>
     </div>
-    </div>
+    </main>
 </div>
 </div>
 </body>
