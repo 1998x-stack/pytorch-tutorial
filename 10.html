@@ -4,12 +4,21 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.5, user-scalable=yes">
     <title>第10章 循环神经网络与注意力 — PyTorch教程</title>
+    <style>
+        body { font-family: system-ui, -apple-system, 'PingFang SC', 'Segoe UI', sans-serif; line-height: 1.8; margin: 0; padding: 12px; }
+        .container, .main-content { min-width: 0; }
+        .main-content { overflow-x: auto; }
+        pre { overflow-x: auto; max-width: 100%; }
+        pre, code { font-family: 'JetBrains Mono', ui-monospace, monospace; }
+        table { max-width: 100%; }
+        img, svg { max-width: 100%; }
+    </style>
     <link rel="stylesheet" href="theme.css">
 </head>
 <body>
 <div class="double-border">
 <div class="container">
-    <div class="sidebar">
+    <nav class="sidebar" aria-label="课程目录">
         <h3>🔥 课程目录</h3>
         <ul class="chapter-list">
             <li><a href="01.html">第1章 初识PyTorch</a></li>
@@ -41,10 +50,10 @@
             <li><a href="27.html">第27章 实战项目：图像分类全流程</a></li>
             <li><a href="28.html">第28章 课程总结与学习路线</a></li>
         </ul>
-    </div>
-    <div class="main-content">
+    </nav>
+    <main class="main-content">
 
-<h2>第10章 循环神经网络与注意力</h2>
+<h1>第10章 循环神经网络与注意力</h1>
 
 <p>大家好，我是你们的讲师。欢迎来到第十章。</p>
 
@@ -52,7 +61,7 @@
 
 <p>从 2014 年到 2020 年左右，RNN 和它的变体 LSTM、GRU 几乎统治了所有的序列建模任务：机器翻译、语音识别、文本生成、情感分析。直到 2017 年 Transformer 和自注意力机制的横空出世，格局才被彻底改写。但即使在 2026 年的今天，RNN 在特定场景下仍然有不可替代的价值。而理解 RNN 的局限性，恰恰能帮你更好地理解注意力机制为什么有效。这一章我们先讲 RNN 和 LSTM，然后过渡到自注意力——你会发现，这两者解决的是同一个问题，只是思路不同。</p>
 
-<h3>10.1 RNN 面临的挑战：变长与长期依赖</h3>
+<h2>10.1 RNN 面临的挑战：变长与长期依赖</h2>
 
 <p>CNN 在图像上表现优秀，但无法直接处理序列数据，原因有二：</p>
 
@@ -62,6 +71,34 @@
 </ul>
 
 <p>RNN 的设计思想很直接：<strong>每次处理序列中的一个元素，同时维护一个"隐状态（hidden state）"向量，这个向量像接力棒一样在时间步之间传递</strong>。每一步，隐状态都会根据当前输入和上一步的隐状态进行更新。</p>
+
+<figure class="teach-fig">
+    <svg viewBox="0 0 620 190" role="img" aria-labelledby="f10a-t f10a-d">
+        <title id="f10a-t">RNN 按时间步展开，隐状态像接力棒一样向后传递</title>
+        <desc id="f10a-d">输入 x0、x1、x2 依次进入，每个时间步的隐状态 h 由当前输入 x 和上一步隐状态共同决定，并传递到下一步；同一套权重在所有时间步共享。</desc>
+        <defs><marker id="f10a-a" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#7c3aed"/></marker></defs>
+        <g font-family="'PingFang SC','Segoe UI',system-ui,sans-serif">
+            <rect x="40" y="60" width="70" height="48" rx="8" fill="#ede9fe" stroke="#7c3aed"/>
+            <rect x="235" y="60" width="70" height="48" rx="8" fill="#ede9fe" stroke="#7c3aed"/>
+            <rect x="430" y="60" width="70" height="48" rx="8" fill="#ede9fe" stroke="#7c3aed"/>
+            <text x="75" y="90" font-size="14" font-weight="700" fill="#5b21b6" text-anchor="middle">h₀</text>
+            <text x="270" y="90" font-size="14" font-weight="700" fill="#5b21b6" text-anchor="middle">h₁</text>
+            <text x="465" y="90" font-size="14" font-weight="700" fill="#5b21b6" text-anchor="middle">h₂</text>
+            <text x="75" y="145" font-size="12" fill="#475569" text-anchor="middle">x₀</text>
+            <text x="270" y="145" font-size="12" fill="#475569" text-anchor="middle">x₁</text>
+            <text x="465" y="145" font-size="12" fill="#475569" text-anchor="middle">x₂</text>
+            <line x1="75" y1="140" x2="75" y2="114" stroke="#94a3b8" stroke-width="1.8" marker-end="url(#f10a-a)"/>
+            <line x1="270" y1="140" x2="270" y2="114" stroke="#94a3b8" stroke-width="1.8" marker-end="url(#f10a-a)"/>
+            <line x1="465" y1="140" x2="465" y2="114" stroke="#94a3b8" stroke-width="1.8" marker-end="url(#f10a-a)"/>
+            <line x1="112" y1="84" x2="231" y2="84" stroke="#7c3aed" stroke-width="2" marker-end="url(#f10a-a)"/>
+            <line x1="307" y1="84" x2="426" y2="84" stroke="#7c3aed" stroke-width="2" marker-end="url(#f10a-a)"/>
+            <text x="171" y="76" font-size="11" fill="#6d28d9" text-anchor="middle">同权重</text>
+            <text x="366" y="76" font-size="11" fill="#6d28d9" text-anchor="middle">同权重</text>
+            <text x="545" y="88" font-size="11" fill="#64748b">→ …</text>
+        </g>
+    </svg>
+    <figcaption>RNN 沿时间步展开：每一步都用<em>同一套</em>权重把当前输入 x 与上一步隐状态 h 合成新的 h。信息必须沿链式箭头逐步传递，这也是"长期依赖"困难的来源。</figcaption>
+</figure>
 
 <pre><code>import torch.nn as nn
 
@@ -78,7 +115,7 @@ output, h_n = rnn(x)
 # output: [B, seq_len, 128]  每个时间步的输出
 # h_n:    [1, B, 128]         最后一个时间步的隐状态</code></pre>
 
-<h3>10.2 梯度消失与 LSTM</h3>
+<h2>10.2 梯度消失与 LSTM</h2>
 
 <p>普通 RNN 有一个致命缺陷——<strong>梯度消失</strong>。想象你在看一本 500 页的小说，看到第 500 页时还想记住第 1 页的内容。在 RNN 中，第 1 步的信息要经过 499 次矩阵乘法才能传到第 500 步，每次乘法都会把梯度缩小一些。经过几百步的累积，梯度几乎降为零——模型根本学不会"长期依赖"。</p>
 
@@ -122,7 +159,7 @@ output, (h_n, c_n) = lstm(x)
     这种"选择性记忆"的机制，让 LSTM 可以轻松处理上百步的序列。
 </div>
 
-<h3>10.3 GRU：LSTM 的简洁版本</h3>
+<h2>10.3 GRU：LSTM 的简洁版本</h2>
 
 <p>GRU（Gated Recurrent Unit）是 LSTM 的简化变体，它将遗忘门和输入门合并为一个"更新门"（Update Gate），并且去掉了单独的单元状态（cell state）。结果就是：<strong>GRU 的参数比 LSTM 少约 25%，但性能在很多任务上和 LSTM 不相上下</strong>。</p>
 
@@ -139,7 +176,7 @@ output, h_n = gru(x)
 
 <p>选择建议：如果你的数据量不大，或者需要快速迭代，GRU 是更好的起点。如果数据量很大且你有足够的计算资源，LSTM 的额外参数可以带来更好的表现力。对于大多数实际项目，<strong>GRU 通常是最佳性价比选择</strong>。</p>
 
-<h3>10.4 2026 年的 RNN：还有用武之地吗？</h3>
+<h2>10.4 2026 年的 RNN：还有用武之地吗？</h2>
 
 <p>在大模型时代，RNN 被很多人认为已经过时了。但事实上，RNN 在以下几个场景中依然生机勃勃：</p>
 
@@ -175,7 +212,7 @@ output, h_n = gru(x)
     </tbody>
 </table>
 
-<h3>10.5 自注意力：更好的选择</h3>
+<h2>10.5 自注意力：更好的选择</h2>
 
 <p>好，现在我们来说说为什么对于大多数序列任务，你应该用自注意力而不是 RNN。</p>
 
@@ -193,6 +230,39 @@ output, h_n = gru(x)
 
 <p>它的计算过程就像一个信息检索系统：每个位置生成 Q、K、V，然后计算每个位置的 Query 和所有位置的 Key 的相似度（点积），得到注意力权重，最后用权重加权求和所有位置的 Value。这样，每个位置的输出都集结了整个序列的信息，而且路径长度只有 1——无论序列多长，信息都可以一步到达。</p>
 
+<figure class="teach-fig">
+    <svg viewBox="0 0 620 220" role="img" aria-labelledby="f10b-t f10b-d">
+        <title id="f10b-t">RNN 链式传递与自注意力全局连接的对比</title>
+        <desc id="f10b-d">左图 RNN 将 4 个位置的隐状态连成一条链，信息必须逐步传递，两端间路径长度为 3；右图自注意力让 4 个位置两两直接相连，任意两位置间路径长度都是 1。</desc>
+        <defs><marker id="f10b-a" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#7c3aed"/></marker></defs>
+        <g font-family="'PingFang SC','Segoe UI',system-ui,sans-serif">
+            <text x="80" y="26" font-size="13" font-weight="700" fill="#5b21b6" text-anchor="middle">RNN：链式传递</text>
+            <circle cx="80" cy="55" r="13" fill="#ede9fe" stroke="#7c3aed"/><text x="80" y="59" font-size="11" fill="#5b21b6" text-anchor="middle">h₀</text>
+            <circle cx="80" cy="105" r="13" fill="#ede9fe" stroke="#7c3aed"/><text x="80" y="109" font-size="11" fill="#5b21b6" text-anchor="middle">h₁</text>
+            <circle cx="80" cy="155" r="13" fill="#ede9fe" stroke="#7c3aed"/><text x="80" y="159" font-size="11" fill="#5b21b6" text-anchor="middle">h₂</text>
+            <circle cx="80" cy="205" r="13" fill="#ede9fe" stroke="#7c3aed"/><text x="80" y="209" font-size="11" fill="#5b21b6" text-anchor="middle">h₃</text>
+            <line x1="80" y1="70" x2="80" y2="90" stroke="#7c3aed" stroke-width="2" marker-end="url(#f10b-a)"/>
+            <line x1="80" y1="120" x2="80" y2="140" stroke="#7c3aed" stroke-width="2" marker-end="url(#f10b-a)"/>
+            <line x1="80" y1="170" x2="80" y2="190" stroke="#7c3aed" stroke-width="2" marker-end="url(#f10b-a)"/>
+            <text x="80" y="195" font-size="10" fill="#64748b"></text>
+            <text x="180" y="130" font-size="11" fill="#64748b">h₀→h₃ 路径长 3</text>
+            <line x1="300" y1="16" x2="300" y2="210" stroke="#e2e8f0" stroke-width="1.5"/>
+            <text x="465" y="26" font-size="13" font-weight="700" fill="#0369a1" text-anchor="middle">自注意力：全局连接</text>
+            <circle cx="350" cy="110" r="15" fill="#e0f2fe" stroke="#0284c7"/><text x="350" y="114" font-size="11" fill="#075985" text-anchor="middle">t₀</text>
+            <circle cx="425" cy="110" r="15" fill="#e0f2fe" stroke="#0284c7"/><text x="425" y="114" font-size="11" fill="#075985" text-anchor="middle">t₁</text>
+            <circle cx="500" cy="110" r="15" fill="#e0f2fe" stroke="#0284c7"/><text x="500" y="114" font-size="11" fill="#075985" text-anchor="middle">t₂</text>
+            <circle cx="575" cy="110" r="15" fill="#e0f2fe" stroke="#0284c7"/><text x="575" y="114" font-size="11" fill="#075985" text-anchor="middle">t₃</text>
+            <line x1="365" y1="110" x2="560" y2="110" stroke="#38bdf8" stroke-width="1.4"/>
+            <line x1="359" y1="97" x2="491" y2="97" stroke="#7dd3fc" stroke-width="1.4"/>
+            <line x1="365" y1="123" x2="560" y2="123" stroke="#7dd3fc" stroke-width="1.4"/>
+            <line x1="440" y1="102" x2="485" y2="118" stroke="#bae6fd" stroke-width="1.4"/>
+            <line x1="440" y1="118" x2="485" y2="102" stroke="#bae6fd" stroke-width="1.4"/>
+            <text x="465" y="185" font-size="11" fill="#64748b" text-anchor="middle">任意两位置直接相连，路径长 1</text>
+        </g>
+    </svg>
+    <figcaption>两种连接的拓扑差异。RNN（左）把信息串成一条链，两端点间路径长 O(n)；自注意力（右）让任意两位置直接相连，路径长恒为 1。拓扑差异直接解释了为什么自注意力更擅长长距离依赖，也解释了它的 O(n²) 计算开销。</figcaption>
+</figure>
+
 <pre><code># 自注意力的核心计算（简化版）
 def scaled_dot_product_attention(Q, K, V):
     # Q, K, V: [B, seq_len, d_k]
@@ -206,7 +276,41 @@ def scaled_dot_product_attention(Q, K, V):
     output = torch.matmul(attn_weights, V)
     return output, attn_weights</code></pre>
 
-<h3>10.6 Transformer 编码器简介</h3>
+<div class="demo" role="group" aria-labelledby="d10-h">
+    <h4 id="d10-h">动手试一试：注意力权重怎么算</h4>
+    <p style="margin:6px 0;">4 个 token 的玩具嵌入（Q=K=嵌入，d_k=4）。选一个查询位置，看它如何把注意力分配给其他位置：分数 = q·kᵢ / √d_k，再 softmax（教学示意，用等价 JS 计算）。</p>
+    <div class="controls">
+        <button type="button" data-q="0" aria-pressed="false">查询 t₀</button>
+        <button type="button" data-q="1" aria-pressed="false">查询 t₁</button>
+        <button type="button" data-q="2" aria-pressed="false">查询 t₂</button>
+        <button type="button" data-q="3" aria-pressed="false">查询 t₃</button>
+    </div>
+    <div class="out" id="d10-out" aria-live="polite">选择一个查询位置。</div>
+</div>
+<script>
+(function () {
+    var out = document.getElementById('d10-out');
+    var E = [[1,0,1,0],[0,1,1,0],[1,1,0,0],[0,0,1,1]];
+    var dk = 4, scale = Math.sqrt(dk);
+    var btns = document.querySelectorAll('.demo [data-q]');
+    btns.forEach(function (btn) {
+        btn.addEventListener('click', function () {
+            btns.forEach(function (o) { o.setAttribute('aria-pressed', 'false'); });
+            btn.setAttribute('aria-pressed', 'true');
+            var q = E[+btn.dataset.q];
+            var s = E.map(function (k) { return q.reduce(function (a, v, i) { return a + v * k[i]; }, 0) / scale; });
+            var mx = Math.max.apply(null, s);
+            var ex = s.map(function (v) { return Math.exp(v - mx); });
+            var sum = ex.reduce(function (a, b) { return a + b; }, 0);
+            var w = ex.map(function (v) { return v / sum; });
+            out.textContent = '查询 t' + btn.dataset.q + '\n' +
+                w.map(function (v, i) { return '→ t' + i + ': ' + (v * 100).toFixed(1) + '%'; }).join('\n');
+        });
+    });
+})();
+</script>
+
+<h2>10.6 Transformer 编码器简介</h2>
 
 <p>一个简化的 Transformer Encoder 层包含两个子层：<strong>多头自注意力（Multi-Head Self-Attention）</strong>和 <strong>前馈网络（Feed-Forward Network, FFN）</strong>，每个子层都有残差连接（Residual Connection）和层归一化（LayerNorm）。</p>
 
@@ -240,7 +344,7 @@ encoder = nn.TransformerEncoder(encoder_layer, num_layers=6)
         <a href="index.html">📖 返回目录</a>
         <a href="11.html">下一章 →</a>
     </div>
-    </div>
+    </main>
 </div>
 </div>
 </body>
