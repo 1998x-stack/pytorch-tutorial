@@ -4,12 +4,21 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.5, user-scalable=yes">
     <title>第15章 混合精度训练 — PyTorch教程</title>
+    <style>
+        body { font-family: system-ui, -apple-system, 'PingFang SC', 'Segoe UI', sans-serif; line-height: 1.8; margin: 0; padding: 12px; }
+        .container, .main-content { min-width: 0; }
+        .main-content { overflow-x: auto; }
+        pre { overflow-x: auto; max-width: 100%; }
+        pre, code { font-family: 'JetBrains Mono', ui-monospace, monospace; }
+        table { max-width: 100%; }
+        img, svg { max-width: 100%; }
+    </style>
     <link rel="stylesheet" href="theme.css">
 </head>
 <body>
 <div class="double-border">
 <div class="container">
-    <div class="sidebar">
+    <nav class="sidebar" aria-label="课程目录">
         <h3>🔥 课程目录</h3>
         <ul class="chapter-list">
             <li><a href="01.html">第1章 初识PyTorch</a></li>
@@ -41,10 +50,10 @@
             <li><a href="27.html">第27章 实战项目：图像分类全流程</a></li>
             <li><a href="28.html">第28章 课程总结与学习路线</a></li>
         </ul>
-    </div>
-    <div class="main-content">
+    </nav>
+    <main class="main-content">
 
-<h2>第15章 混合精度训练</h2>
+<h1>第15章 混合精度训练</h1>
 
 <p>大家好，我是你们的讲师。这一章我们来聊一个训练加速的"免费午餐"——<strong>混合精度训练（Mixed Precision Training）</strong>。</p>
 
@@ -52,7 +61,7 @@
 
 <p>混合精度训练的核心思想很简单：<strong>不是所有计算都需要 FP32 的精度</strong>。梯度、激活值、中间特征——这些张量中的大部分信息对精度并不敏感，用 FP16 或 BF16 存就够了。只有少数关键操作（比如损失计算、权重更新）才需要保持 FP32 的精度。我们把高精度和低精度混合起来用，这就是"混合精度"这个名字的由来。</p>
 
-<h3>15.1 FP16 与 BF16：两种低精度格式</h3>
+<h2>15.1 FP16 与 BF16：两种低精度格式</h2>
 
 <p>在深入代码之前，我们需要先搞清楚两种主要的低精度浮点格式：<strong>FP16</strong>（半精度浮点数）和 <strong>BF16</strong>（Brain Floating Point）。</p>
 
@@ -97,6 +106,39 @@
 
 <p>注意看动态范围这一列：FP16 最大只能表示到 65504，而 BF16 和 FP32 一样可以表示到 3.4e38。这个差异在实际训练中非常关键。</p>
 
+<figure class="teach-fig">
+    <svg viewBox="0 0 620 210" role="img" aria-labelledby="f15-t f15-d">
+        <title id="f15-t">FP32、FP16 与 BF16 的位布局对比</title>
+        <desc id="f15-d">每个小格代表一位。FP32 为 1 位符号 + 8 位指数 + 23 位尾数；FP16 压缩为 1+5+10，指数只有 5 位所以动态范围窄；BF16 为 1+8+7，指数位与 FP32 相同所以范围相同，但尾数只有 7 位精度更低。</desc>
+        <g font-family="'PingFang SC','Segoe UI',system-ui,sans-serif">
+            <text x="100" y="36" font-size="12" font-weight="700" fill="#334155" text-anchor="end">FP32</text>
+            <rect x="110" y="24" width="12" height="20" fill="#cbd5e1" stroke="#94a3b8"/>
+            <rect x="122" y="24" width="96" height="20" fill="#fdba74" stroke="#ea580c"/>
+            <rect x="218" y="24" width="276" height="20" fill="#bae6fd" stroke="#0284c7"/>
+            <text x="170" y="39" font-size="11" fill="#7c2d12" text-anchor="middle">指数 8</text>
+            <text x="356" y="39" font-size="11" fill="#075985" text-anchor="middle">尾数 23</text>
+            <text x="510" y="39" font-size="11" fill="#64748b">范围 ~3.4e38</text>
+            <text x="100" y="86" font-size="12" font-weight="700" fill="#334155" text-anchor="end">FP16</text>
+            <rect x="110" y="74" width="12" height="20" fill="#cbd5e1" stroke="#94a3b8"/>
+            <rect x="122" y="74" width="60" height="20" fill="#fdba74" stroke="#ea580c"/>
+            <rect x="182" y="74" width="120" height="20" fill="#bae6fd" stroke="#0284c7"/>
+            <text x="152" y="89" font-size="11" fill="#7c2d12" text-anchor="middle">指数 5</text>
+            <text x="242" y="89" font-size="11" fill="#075985" text-anchor="middle">尾数 10</text>
+            <text x="320" y="89" font-size="11" fill="#b91c1c">范围窄 ~65504</text>
+            <text x="100" y="136" font-size="12" font-weight="700" fill="#334155" text-anchor="end">BF16</text>
+            <rect x="110" y="124" width="12" height="20" fill="#cbd5e1" stroke="#94a3b8"/>
+            <rect x="122" y="124" width="96" height="20" fill="#fdba74" stroke="#ea580c"/>
+            <rect x="218" y="124" width="84" height="20" fill="#bae6fd" stroke="#0284c7"/>
+            <text x="170" y="139" font-size="11" fill="#7c2d12" text-anchor="middle">指数 8</text>
+            <text x="260" y="139" font-size="11" fill="#075985" text-anchor="middle">尾数 7</text>
+            <text x="320" y="139" font-size="11" fill="#15803d">范围同 FP32</text>
+            <text x="110" y="176" font-size="11" fill="#64748b">每格 = 1 位；灰 = 符号位，橙 = 指数（决定动态范围），蓝 = 尾数（决定精度）</text>
+            <text x="110" y="196" font-size="11" fill="#334155">FP16 指数只有 5 位 → 梯度易下溢；BF16 保留 8 位指数 → 无需 loss scaling</text>
+        </g>
+    </svg>
+    <figcaption>三种格式的位布局对比（每格一位）。指数位数决定<strong>动态范围</strong>，尾数位数决定<strong>精度</strong>：FP16 用 5 位指数换来 10 位尾数，精度高但范围窄；BF16 用 8 位指数（与 FP32 相同）失去 3 位尾数，换来与 FP32 相同的范围。这从位层面解释了"为什么 FP16 需要 GradScaler 而 BF16 不需要"。</figcaption>
+</figure>
+
 <div class="warning">
     <strong>FP16 的"精度陷阱"：</strong>FP16 的动态范围很窄，这意味着梯度值很容易<strong>下溢</strong>到零（underflow）。如果你的模型激活值或梯度的绝对值小于 2<sup>-24</sup>（约 6e-8），FP16 就直接把它截断成零了。这就是为什么 FP16 训练需要配合 loss scaling 的原因。
 </div>
@@ -105,7 +147,7 @@
 
 <p>所以一个很好的经验法则是：<strong>如果硬件支持 BF16（Ampere 架构及以上），优先用 BF16；如果只能用 FP16（V100 或更老的卡），必须配合 Gradient Scaler</strong>。</p>
 
-<h3>15.2 torch.amp.autocast：一行代码开启混合精度</h3>
+<h2>15.2 torch.amp.autocast：一行代码开启混合精度</h2>
 
 <p>PyTorch 从 1.6 版本开始就在 <code>torch.amp</code> 模块中提供了自动混合精度（Automatic Mixed Precision, AMP）的支持。所谓"自动"，是指 PyTorch 会自动判断每个操作应该用 FP16/BF16 还是 FP32 来执行。比如矩阵乘法（GEMM）和卷积这类计算密集型的操作会用低精度加速，而损失计算、softmax 等精度敏感的操作会自动回退到 FP32。</p>
 
@@ -137,7 +179,7 @@ for batch in dataloader:
     <strong>device_type 参数：</strong>从 PyTorch 2.0 开始，<code>autocast</code> 需要显式传入 <code>device_type</code> 参数。如果使用 CUDA 设备，传 <code>"cuda"</code>；如果使用 Apple Silicon 的 MPS 后端，传 <code>"mps"</code>；如果使用 CPU，传 <code>"cpu"</code>。在 PyTorch 2.12 中，<code>device_type</code> 是必填参数。
 </div>
 
-<h3>15.3 GradientScaler：FP16 训练的守护神</h3>
+<h2>15.3 GradientScaler：FP16 训练的守护神</h2>
 
 <p>如果你使用的是 FP16（比如在 V100 上训练），光有 <code>autocast</code> 是不够的。还记得我们前面说的 FP16 动态范围窄的问题吗？在训练过程中，梯度值的分布范围很大，很多梯度可能会小于 FP16 的最小可表示正数（约 6e-8），从而下溢到零。</p>
 
@@ -175,6 +217,37 @@ for batch in dataloader:
     # 4. 更新缩放因子
     scaler.update()</code></pre>
 
+<div class="demo" role="group" aria-labelledby="d15-h">
+    <h4 id="d15-h">动手试一试：梯度下溢与 loss scaling</h4>
+    <p style="margin:6px 0;">FP16 最小正次正规数 = 2<sup>−24</sup> ≈ 5.96e-8，低于它的梯度直接归零。选一个梯度幅值，看乘上缩放因子 2<sup>16</sup>=65536 后能否被表示（教学示意，用等价 JS 计算）。</p>
+    <div class="controls">
+        <button type="button" data-g="1e-6" aria-pressed="false">|g| = 1e-6</button>
+        <button type="button" data-g="1e-8" aria-pressed="false">|g| = 1e-8</button>
+        <button type="button" data-g="1e-9" aria-pressed="false">|g| = 1e-9</button>
+    </div>
+    <div class="out" id="d15-out" aria-live="polite">选择一个梯度幅值。</div>
+</div>
+<script>
+(function () {
+    var out = document.getElementById('d15-out');
+    var minSub = Math.pow(2, -24), scale = 65536;
+    var btns = document.querySelectorAll('.demo [data-g]');
+    btns.forEach(function (btn) {
+        btn.addEventListener('click', function () {
+            btns.forEach(function (o) { o.setAttribute('aria-pressed', 'false'); });
+            btn.setAttribute('aria-pressed', 'true');
+            var g = +btn.dataset.g, sg = g * scale;
+            var raw = g < minSub ? '下溢为 0' : '可表示 ≈ ' + g.toExponential(3);
+            var scaled = sg < minSub ? '仍下溢' : '可表示 ≈ ' + sg.toExponential(3);
+            out.textContent = '|g| = ' + g.toExponential(0) + '\n' +
+                '直接存 FP16：' + raw + '\n' +
+                '先 ×65536 再存 FP16：' + scaled + '\n' +
+                'unscale 后恢复为 ' + g.toExponential(0) + ' → 梯度未丢失';
+        });
+    });
+})();
+</script>
+
 <p><code>GradScaler</code> 内部维护了一个动态的缩放因子。如果连续多次没有发生梯度溢出，他会逐渐增大缩放因子；如果检测到溢出，他会减小缩放因子。整个过程自动进行，你只需要按照上面的模式写代码就行。</p>
 
 <div class="highlight">
@@ -187,7 +260,7 @@ for batch in dataloader:
     </ol>
 </div>
 
-<h3>15.4 BF16：更简单的选择</h3>
+<h2>15.4 BF16：更简单的选择</h2>
 
 <p>如果你使用的是 Ampere 架构（A100）或更新的 GPU（H100、RTX 4090 等），那么你不需要 <code>GradScaler</code>。直接使用 BF16 格式配合 <code>autocast</code> 就足够了：</p>
 
@@ -220,7 +293,7 @@ with autocast(device_type="cuda", dtype=dtype):
 
 <p><code>torch.cuda.get_device_capability()</code> 返回 GPU 的计算能力（Compute Capability）。Ampere 架构（A100）的计算能力是 8.0，所以 <code>>= (8, 0)</code> 就能覆盖所有支持 BF16 的 GPU。</p>
 
-<h3>15.5 实际加速效果与显存收益</h3>
+<h2>15.5 实际加速效果与显存收益</h2>
 
 <p>说了这么多原理，来看看实际效果。下面这组数据来自在一个 ResNet-50 + ImageNet 的实验中（batch size=256，A100 80GB）：</p>
 
@@ -257,7 +330,7 @@ with autocast(device_type="cuda", dtype=dtype):
 
 <p>可以看到：<strong>吞吐量提升了 2.3 倍，显存占用降低了一半</strong>，而收敛所需的 epoch 数和 FP32 完全一致。对于大模型来说收益更明显。在 Llama 7B 的 Fine-tuning 场景中，AMP（BF16）是事实上的标配——没有人会在 FP32 下微调 7B 模型，因为显存放不下，速度也慢得无法接受。</p>
 
-<h3>15.6 注意事项与常见问题</h3>
+<h2>15.6 注意事项与常见问题</h2>
 
 <p>混合精度训练虽然简单，但也不是完全没有坑。下面几个问题值得注意：</p>
 
@@ -280,8 +353,8 @@ with autocast(device_type="cuda", dtype=dtype):
             <a href="14.html">← 上一章</a>
             <a href="index.html">📖 返回目录</a>
             <a href="16.html">下一章 →</a>
-        </div>
     </div>
+    </main>
 </div>
 </div>
 </body>
