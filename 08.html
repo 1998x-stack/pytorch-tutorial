@@ -4,12 +4,21 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.5, user-scalable=yes">
     <title>第8章 数据加载与预处理 — PyTorch教程</title>
+    <style>
+        body { font-family: system-ui, -apple-system, 'PingFang SC', 'Segoe UI', sans-serif; line-height: 1.8; margin: 0; padding: 12px; }
+        .container, .main-content { min-width: 0; }
+        .main-content { overflow-x: auto; }
+        pre { overflow-x: auto; max-width: 100%; }
+        pre, code { font-family: 'JetBrains Mono', ui-monospace, monospace; }
+        table { max-width: 100%; }
+        img, svg { max-width: 100%; }
+    </style>
     <link rel="stylesheet" href="theme.css">
 </head>
 <body>
 <div class="double-border">
 <div class="container">
-    <div class="sidebar">
+    <nav class="sidebar" aria-label="课程目录">
         <h3>🔥 课程目录</h3>
         <ul class="chapter-list">
             <li><a href="01.html">第1章 初识PyTorch</a></li>
@@ -41,10 +50,10 @@
             <li><a href="27.html">第27章 实战项目：图像分类全流程</a></li>
             <li><a href="28.html">第28章 课程总结与学习路线</a></li>
         </ul>
-    </div>
-    <div class="main-content">
+    </nav>
+    <main class="main-content">
 
-<h2>第8章 数据加载与预处理</h2>
+<h1>第8章 数据加载与预处理</h1>
 
 <p>大家好，我是你们的讲师。欢迎回到 PyTorch 课程。</p>
 
@@ -52,9 +61,38 @@
 
 <p>我见过太多团队花了几周时间设计一个花哨的模型架构，结果训练到一半发现数据加载成了瓶颈——GPU 利用率一直挂在 30% 以下，训练效率惨不忍睹。他们也见过 debug 了一整天才发现是 DataLoader 参数配错了导致模型根本没有收敛。这一章我们来系统地学习 PyTorch 的数据加载体系：从 Dataset 到 DataLoader，再到各种数据增强和预处理手段。学完这一章，你再也不会被"数据"这个看似简单的问题绊倒。</p>
 
-<h3>8.1 torch.utils.data 核心架构</h3>
+<h2>8.1 torch.utils.data 核心架构</h2>
 
 <p>PyTorch 的数据加载体系分为两层：<strong>Dataset</strong>（数据集）和 <strong>DataLoader</strong>（数据加载器）。Dataset 负责定义"如何获取一条数据"，DataLoader 负责定义"如何批量地、高效地获取这些数据"。</p>
+
+<figure class="teach-fig">
+    <svg viewBox="0 0 620 240" role="img" aria-labelledby="f8-t f8-d">
+        <title id="f8-t">Dataset 到 DataLoader 再到 GPU 的数据流水线</title>
+        <desc id="f8-d">Dataset 按索引提供单条样本，Sampler 决定遍历顺序（是否 shuffle），多个 worker 子进程并行调用 __getitem__ 并应用 transform，collate 把多条样本堆成一个 batch，最后通过 pin_memory 拷贝到 GPU 显存。</desc>
+        <defs><marker id="f8-a" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#0ea5e9"/></marker></defs>
+        <g font-family="'PingFang SC','Segoe UI',system-ui,sans-serif">
+            <rect x="16" y="70" width="120" height="70" rx="10" fill="#e0f2fe" stroke="#0284c7"/>
+            <text x="76" y="98" font-size="13" font-weight="700" fill="#075985" text-anchor="middle">Dataset</text>
+            <text x="76" y="118" font-size="11" fill="#0369a1" text-anchor="middle">__getitem__ 单条</text>
+            <rect x="176" y="70" width="120" height="70" rx="10" fill="#fff7ed" stroke="#c2410c"/>
+            <text x="236" y="98" font-size="13" font-weight="700" fill="#7c2d12" text-anchor="middle">Sampler</text>
+            <text x="236" y="118" font-size="11" fill="#9a3412" text-anchor="middle">shuffle / 顺序</text>
+            <rect x="336" y="70" width="150" height="70" rx="10" fill="#ecfdf5" stroke="#16a34a"/>
+            <text x="411" y="94" font-size="13" font-weight="700" fill="#166534" text-anchor="middle">num_workers 子进程</text>
+            <text x="411" y="114" font-size="11" fill="#15803d" text-anchor="middle">并行 __getitem__ + transform</text>
+            <rect x="516" y="70" width="90" height="70" rx="10" fill="#fef2f2" stroke="#dc2626"/>
+            <text x="561" y="98" font-size="13" font-weight="700" fill="#991b1b" text-anchor="middle">collate</text>
+            <text x="561" y="118" font-size="11" fill="#b91c1c" text-anchor="middle">堆成 batch</text>
+            <line x1="138" y1="105" x2="172" y2="105" stroke="#0ea5e9" stroke-width="2" marker-end="url(#f8-a)"/>
+            <line x1="298" y1="105" x2="332" y2="105" stroke="#0ea5e9" stroke-width="2" marker-end="url(#f8-a)"/>
+            <line x1="488" y1="105" x2="512" y2="105" stroke="#0ea5e9" stroke-width="2" marker-end="url(#f8-a)"/>
+            <path d="M561 142 L561 178 L76 178 L76 148" fill="none" stroke="#0ea5e9" stroke-width="1.6" stroke-dasharray="5 4" marker-end="url(#f8-a)"/>
+            <text x="300" y="200" font-size="11" fill="#0369a1" text-anchor="middle">每个 epoch 按 Sampler 顺序重复流水线，pin_memory=True 时 batch 写入页锁定内存，再由 GPU 直接读取</text>
+            <text x="16" y="40" font-size="13" font-weight="700" fill="#334155">一轮迭代：单条样本 → 批量 → GPU</text>
+        </g>
+    </svg>
+    <figcaption>DataLoader 的一轮迭代。Dataset 定义单条样本，Sampler 决定顺序，多个 worker 子进程并行取样本并应用 transform，collate 把单条堆成 batch，最后交给 GPU。<code>num_workers</code> 控制并行度，<code>shuffle</code> 决定 Sampler 是否打乱——这两个参数直接决定 GPU 是"吃饱"还是"饥饿"。</figcaption>
+</figure>
 
 <p>Dataset 有两种类型：</p>
 
@@ -98,7 +136,7 @@ dataset = MyIterableDataset(iter([10, 20, 30, 40]))
 for item in dataset:
     print(item)</code></pre>
 
-<h3>8.2 DataLoader 参数深度解析</h3>
+<h2>8.2 DataLoader 参数深度解析</h2>
 
 <p>有了 Dataset 之后，DataLoader 才是真正的"发动机"。DataLoader 的参数非常多，但每个参数都直接影响到训练的速度和正确性。</p>
 
@@ -172,7 +210,36 @@ dataloader = DataLoader(
     </tbody>
 </table>
 
-<h3>8.3 实战：自定义 CSV 数据集</h3>
+<div class="demo" role="group" aria-labelledby="d8-h">
+    <h4 id="d8-h">动手试一试：一个 epoch 有多少个 batch？</h4>
+    <p style="margin:6px 0;">批次数 = ceil(N / batch_size)；若 <code>drop_last=True</code> 则丢弃不足一批的尾巴，改为 floor(N / batch_size)。点击预设查看（教学示意，用等价 JS 计算）。</p>
+    <div class="controls">
+        <button type="button" data-n="1000" data-b="32" aria-pressed="false">N=1000, batch=32</button>
+        <button type="button" data-n="1000" data-b="64" aria-pressed="false">N=1000, batch=64</button>
+        <button type="button" data-n="1000" data-b="128" aria-pressed="false">N=1000, batch=128</button>
+    </div>
+    <div class="out" id="d8-out" aria-live="polite">点击任意预设查看批次数。</div>
+</div>
+<script>
+(function () {
+    var out = document.getElementById('d8-out');
+    var btns = document.querySelectorAll('.demo [data-n]');
+    btns.forEach(function (btn) {
+        btn.addEventListener('click', function () {
+            btns.forEach(function (o) { o.setAttribute('aria-pressed', 'false'); });
+            btn.setAttribute('aria-pressed', 'true');
+            var N = +btn.dataset.n, b = +btn.dataset.b;
+            var keep = Math.ceil(N / b), drop = Math.floor(N / b);
+            var last = N % b;
+            out.textContent = 'N=' + N + ', batch_size=' + b + '\n' +
+                'drop_last=False → ' + keep + ' 批（最后一批 ' + (last === 0 ? b : last) + ' 条）\n' +
+                'drop_last=True  → ' + drop + ' 批（丢弃最后 ' + last + ' 条）';
+        });
+    });
+})();
+</script>
+
+<h2>8.3 实战：自定义 CSV 数据集</h2>
 
 <p>在真实项目中，数据通常存储在 CSV 文件中。我们来写一个自定义的 Dataset 来读取 CSV 格式的表格数据：</p>
 
@@ -208,7 +275,7 @@ dataloader = DataLoader(dataset, batch_size=32, shuffle=True)</code></pre>
 
 <p>这个实现虽然简单，但在实际项目中非常实用。很多团队会用 Pandas 先做数据清洗和预处理，然后通过自定义 Dataset 把清洗后的数据喂给模型。注意这里我们在 <code>__init__</code> 中一次性读取了整个 CSV——这对中小规模数据（百万行以内）是 OK 的，但如果数据达到千万级别，你可能需要用 <code>chunksize</code> 分批读取。</p>
 
-<h3>8.4 实战：自定义图像数据集</h3>
+<h2>8.4 实战：自定义图像数据集</h2>
 
 <p>图像数据集的实现比 CSV 稍微复杂一些，因为需要处理图片文件的解码和变换：</p>
 
@@ -259,7 +326,7 @@ class ImageFolderDataset(Dataset):
     <strong>性能小贴士：</strong>在 <code>__getitem__</code> 中，每次读取图片时都调用 <code>Image.open()</code> 并做变换，这其实是 PyTorch 的设计哲学——不在 <code>__init__</code> 中预加载所有图片到内存（会撑爆内存），而是按需读取。配合 num_workers 多进程并行，你可以在 1 秒内加载成百上千张图片，而内存占用只和 batch_size 有关，和数据集总量无关。
 </div>
 
-<h3>8.5 常见的 DataLoader 踩坑实录</h3>
+<h2>8.5 常见的 DataLoader 踩坑实录</h2>
 
 <p>这一节我们来讲 DataLoader 最经典的几个"坑"。</p>
 
@@ -281,7 +348,7 @@ class ImageFolderDataset(Dataset):
 
 <p>很多人不理解 <code>pin_memory</code> 的作用。简单说，CPU 内存到 GPU 显存的数据传输，默认是通过一个"中转缓冲区"完成的，这个中转过程会复制一次数据。而 <code>pin_memory=True</code> 把 CPU 内存固定在物理地址上（不被交换出去），使 GPU 可以直接从这个地址读取数据，跳过一次复制。在训练任务中，这通常能带来 10-20% 的整体性能提升——免费的性能，只需要改一个布尔值。</p>
 
-<h3>8.6 torchvision.transforms 预处理流水线</h3>
+<h2>8.6 torchvision.transforms 预处理流水线</h2>
 
 <p>对于图像任务，torchvision 提供了强大的预处理工具链。截至 2026 年，torchvision 的 <strong>transforms.v2</strong> 已经是官方推荐的标准方案。</p>
 
@@ -323,7 +390,7 @@ val_transform = T.Compose([
         <a href="index.html">📖 返回目录</a>
         <a href="09.html">下一章 →</a>
     </div>
-    </div>
+    </main>
 </div>
 </div>
 </body>
