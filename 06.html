@@ -4,12 +4,21 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.5, user-scalable=yes">
     <title>第6章 损失函数与优化器 — PyTorch教程</title>
+    <style>
+        body { font-family: system-ui, -apple-system, 'PingFang SC', 'Segoe UI', sans-serif; line-height: 1.8; margin: 0; padding: 12px; }
+        .container, .main-content { min-width: 0; }
+        .main-content { overflow-x: auto; }
+        pre { overflow-x: auto; max-width: 100%; }
+        pre, code { font-family: 'JetBrains Mono', ui-monospace, monospace; }
+        table { max-width: 100%; }
+        img, svg { max-width: 100%; }
+    </style>
     <link rel="stylesheet" href="theme.css">
 </head>
 <body>
 <div class="double-border">
 <div class="container">
-    <div class="sidebar">
+    <nav class="sidebar" aria-label="课程目录">
         <h3>🔥 课程目录</h3>
         <ul class="chapter-list">
             <li><a href="01.html">第1章 初识PyTorch</a></li>
@@ -41,10 +50,10 @@
             <li><a href="27.html">第27章 实战项目：图像分类全流程</a></li>
             <li><a href="28.html">第28章 课程总结与学习路线</a></li>
         </ul>
-    </div>
-    <div class="main-content">
+    </nav>
+    <main class="main-content">
 
-<h2>第6章 损失函数与优化器</h2>
+<h1>第6章 损失函数与优化器</h1>
 
 <p>大家好，我是你们的讲师。上一章我们学会了构建神经网络——无论是手动实现还是用 nn.Module 封装。但模型搭建起来之后，我们面临两个关键问题：</p>
 
@@ -54,7 +63,7 @@
 
 <p>如果把训练模型比作射箭：损失函数告诉你箭离靶心有多远，优化器则告诉你下一箭该往哪个方向调整。这一章我们就来透彻地理解这两个核心组件。</p>
 
-<h2>损失函数：模型好坏的度量尺</h2>
+<h2>6.1 损失函数：模型好坏的度量尺</h2>
 
 <p>损失函数（也叫代价函数）是一个数学函数，它接收模型的预测值和真实标签，输出一个标量——数值越小说明预测越准，数值越大说明误差越大。</p>
 
@@ -147,7 +156,7 @@ print(f"BCEWithLogits Loss: {bce_logits(logits_binary, binary_labels):.4f}")</co
     <strong>推荐使用 BCEWithLogitsLoss 而不是 BCELoss：</strong>前者内部做了数值稳定的 log-sum-exp 技巧，比"手动 Sigmoid + BCELoss"更精确、更稳定。同理，如果你在做多分类且想自定义 softmax 之前的操作，可以用 <code>nn.CrossEntropyLoss</code>（它内部就是 LogSoftmax + NLLLoss）。
 </div>
 
-<h2>梯度下降：从山顶走到山谷</h2>
+<h2>6.2 梯度下降：从山顶走到山谷</h2>
 
 <p>现在有了损失函数，我们需要通过调整模型参数来使损失函数的值最小化。这个过程就是优化（Optimization），最核心的方法是<strong>梯度下降（Gradient Descent）</strong>。</p>
 
@@ -157,7 +166,67 @@ print(f"BCEWithLogits Loss: {bce_logits(logits_binary, binary_labels):.4f}")</co
 
 <p>其中 <code>lr</code>（学习率）决定了每一步的大小——步子太小走得太慢，步子太大可能直接跨过山谷跳到对面山坡上。</p>
 
-<h2>SGD 优化器</h2>
+<figure class="teach-fig">
+    <svg viewBox="0 0 620 220" role="img" aria-labelledby="f6-t f6-d">
+        <title id="f6-t">梯度下降在损失曲线上沿负梯度方向逐步下降</title>
+        <desc id="f6-d">横轴为参数 θ，纵轴为损失 L(θ)。曲线是凸的损失函数，最低点在中间。绿色实线箭头表示学习率合适时从右侧起点逐步走向最低点，步长随坡度变小而变短；红色虚线箭头表示学习率过大时一步跨过最低点，在谷底两侧来回振荡。</desc>
+        <defs>
+            <marker id="f6-g" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#16a34a"/></marker>
+            <marker id="f6-r" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#dc2626"/></marker>
+        </defs>
+        <g font-family="'PingFang SC','Segoe UI',system-ui,sans-serif">
+            <line x1="50" y1="178" x2="575" y2="178" stroke="#94a3b8" stroke-width="1.5"/>
+            <line x1="50" y1="18" x2="50" y2="178" stroke="#94a3b8" stroke-width="1.5"/>
+            <text x="30" y="22" font-size="12" fill="#475569">损失</text>
+            <text x="560" y="196" font-size="12" fill="#475569">参数 θ</text>
+            <path d="M 60 140 Q 310 -60 560 140" fill="none" stroke="#334155" stroke-width="2.5"/>
+            <line x1="310" y1="40" x2="310" y2="178" stroke="#cbd5e1" stroke-dasharray="4 4"/>
+            <text x="292" y="196" font-size="12" fill="#475569">最优点</text>
+            <circle cx="500" cy="95" r="5" fill="#16a34a"/>
+            <line x1="500" y1="95" x2="452" y2="72" stroke="#16a34a" stroke-width="2" marker-end="url(#f6-g)"/>
+            <line x1="452" y1="72" x2="402" y2="53" stroke="#16a34a" stroke-width="2" marker-end="url(#f6-g)"/>
+            <line x1="402" y1="53" x2="356" y2="43" stroke="#16a34a" stroke-width="2" marker-end="url(#f6-g)"/>
+            <line x1="356" y1="43" x2="322" y2="40" stroke="#16a34a" stroke-width="2" marker-end="url(#f6-g)"/>
+            <circle cx="322" cy="40" r="4.5" fill="#16a34a"/>
+            <text x="430" y="112" font-size="12" fill="#15803d">学习率合适：逐步逼近</text>
+            <line x1="500" y1="95" x2="128" y2="79" stroke="#dc2626" stroke-width="2" stroke-dasharray="6 4" marker-end="url(#f6-r)"/>
+            <text x="120" y="105" font-size="12" fill="#b91c1c">学习率过大：跨过谷底振荡</text>
+        </g>
+    </svg>
+    <figcaption>沿 <code>θ ← θ − lr·∇L</code> 更新时，学习率决定每一步的步长：合适时（绿）步长随坡度变小而收缩、稳定收敛；过大时（红虚线）一步跨过最低点，在谷底两侧来回振荡甚至发散。这是教学示意，用于说明<em>趋势</em>，不是某次具体实验的实测轨迹。</figcaption>
+</figure>
+
+<div class="demo" role="group" aria-labelledby="d6-h">
+    <h4 id="d6-h">动手试一试：梯度下降步进器</h4>
+    <p style="margin:6px 0;">在 <code>f(θ)=(θ−3)²</code> 上按 <code>θ ← θ − lr·f'(θ)</code> 迭代。选一个学习率，看 5 步后能否靠近谷底 θ=3（教学示意，用等价 JS 计算）。</p>
+    <div class="controls">
+        <button type="button" data-lr="0.1" aria-pressed="false">lr = 0.1</button>
+        <button type="button" data-lr="0.5" aria-pressed="false">lr = 0.5</button>
+        <button type="button" data-lr="1.2" aria-pressed="false">lr = 1.2</button>
+    </div>
+    <div class="out" id="d6-out" aria-live="polite">选择一个学习率开始迭代。</div>
+</div>
+<script>
+(function () {
+    var out = document.getElementById('d6-out');
+    var btns = document.querySelectorAll('.demo [data-lr]');
+    btns.forEach(function (btn) {
+        btn.addEventListener('click', function () {
+            btns.forEach(function (o) { o.setAttribute('aria-pressed', 'false'); });
+            btn.setAttribute('aria-pressed', 'true');
+            var lr = +btn.dataset.lr, t = -4.0;
+            var steps = ['θ 起点 = ' + t.toFixed(3) + '，f(θ) = ' + Math.pow(t - 3, 2).toFixed(3)];
+            for (var i = 0; i < 5; i++) {
+                t = t - lr * 2 * (t - 3);
+                steps.push('第' + (i + 1) + '步: θ = ' + t.toFixed(3) + '，f(θ) = ' + Math.pow(t - 3, 2).toFixed(3));
+            }
+            out.textContent = (lr >= 1 ? '[发散/振荡] ' : '[收敛] ') + steps.join('\n');
+        });
+    });
+})();
+</script>
+
+<h2>6.3 SGD 优化器</h2>
 
 <p>随机梯度下降（SGD）是最经典的优化器。虽然名字叫"随机"，但在 PyTorch 中，<code>SGD</code> 默认使用的是 mini-batch 梯度下降——每个 batch 计算一次梯度并更新。</p>
 
@@ -176,7 +245,7 @@ optimizer = optim.SGD(model.parameters(), lr=0.01, momentum=0.9, weight_decay=1e
 
 <p><strong>Weight Decay 是什么？</strong>它是 L2 正则化——在损失函数中隐式地加入 <code>λ * ||θ||²</code> 项，惩罚过大的参数值，防止过拟合。</p>
 
-<h2>Adam 优化器</h2>
+<h2>6.4 Adam 优化器</h2>
 
 <p>Adam（Adaptive Moment Estimation）是目前最流行的优化器之一。它结合了 Momentum（动量）和 RMSProp（自适应学习率）的优点：</p>
 
@@ -213,7 +282,7 @@ optimizer = optim.AdamW(model.parameters(), lr=1e-3, weight_decay=1e-4)</code></
     </table>
 </div>
 
-<h2>优化三件套：zero_grad → backward → step</h2>
+<h2>6.5 优化三件套：zero_grad → backward → step</h2>
 
 <p>我们已经多次提到这个"铁三角"了，但这一章我们要把它的底层原理彻底讲清楚：</p>
 
@@ -283,7 +352,7 @@ Epoch 160, Loss: 0.011283
 Epoch 200, Loss: 0.011269
 训练结果: w=1.9893, b=1.0295</code></pre>
 
-<h2>学习率调参的故事</h2>
+<h2>6.6 学习率调参的故事</h2>
 
 <p>讲一个真实的故事。2020 年，我指导的一个同学在训练一个图像分类模型时，loss 从一开始就是 NaN。他检查了数据、模型，都没发现问题。最后发现是学习率设成了 10.0 而非 0.01——这个模型只有几层，lr=10 意味着参数更新幅度太大，直接跳出了函数的有效定义域，数值爆炸了。</p>
 
@@ -300,7 +369,7 @@ Epoch 200, Loss: 0.011269
     </ul>
 </div>
 
-<h2>优化器超参数速查</h2>
+<h2>6.7 优化器超参数速查</h2>
 
 <p>这里总结一下两个最常用优化器的关键超参数：</p>
 
@@ -367,7 +436,7 @@ Epoch 200, Loss: 0.011269
             <a href="index.html">📖 返回目录</a>
             <a href="07.html">下一章 →</a>
         </div>
-    </div>
+    </main>
 </div>
 </div>
 </body>
