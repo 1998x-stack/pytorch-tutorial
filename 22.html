@@ -4,12 +4,21 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.5, user-scalable=yes">
     <title>第22章 FSDP与大模型训练 — PyTorch 实战教程</title>
+    <style>
+        body { font-family: system-ui, -apple-system, 'PingFang SC', 'Segoe UI', sans-serif; line-height: 1.8; margin: 0; padding: 12px; }
+        .container, .main-content { min-width: 0; }
+        .main-content { overflow-x: auto; }
+        pre { overflow-x: auto; max-width: 100%; }
+        pre, code { font-family: 'JetBrains Mono', ui-monospace, monospace; }
+        table { max-width: 100%; }
+        img, svg { max-width: 100%; }
+    </style>
     <link rel="stylesheet" href="theme.css">
 </head>
 <body>
 <div class="double-border">
 <div class="container">
-    <div class="sidebar">
+    <nav class="sidebar" aria-label="课程目录">
         <h3>🔥 课程目录</h3>
         <ul class="chapter-list">
             <li><a href="01.html">第1章 初识PyTorch</a></li>
@@ -41,10 +50,10 @@
             <li><a href="27.html">第27章 实战项目：图像分类全流程</a></li>
             <li><a href="28.html">第28章 课程总结与学习路线</a></li>
         </ul>
-    </div>
-    <div class="main-content">
+    </nav>
+    <main class="main-content">
 
-        <h2>第22章 FSDP与大模型训练</h2>
+        <h1>第22章 FSDP与大模型训练</h1>
 
         <p>大家好，我是你们的讲师。上一章我们讲了DDP——把数据分到多卡上并行训练。但DDP有一个前提：完整的模型必须能装进单张显卡。如果你的模型是Llama-70B（700亿参数，以FP16计就要140GB显存），就算你用最新的H100（80GB），也装不下。这时候DDP就无能为力了——你连一份模型都放不下，怎么在每个卡上复制一份？</p>
 
@@ -89,6 +98,36 @@
         <p>总合起来，Llama-7B在FP16下训练需要大概100GB左右的显存。一张A100（80GB）勉强够用batch_size=1，而Llama-70B则需要将近1TB——没有任何单卡能装下。</p>
 
         <p>FSDP的思路是：把参数、梯度、优化器状态都分片到各卡上，每卡只保存 <code>1 / WORLD_SIZE</code> 的份额。在需要的时候，通过 <strong>all-gather</strong> 通信把完整的参数收集回来。</p>
+
+        <figure class="teach-fig">
+            <svg viewBox="0 0 620 230" role="img" aria-labelledby="f22-t f22-d">
+                <title id="f22-t">Llama-7B 在 FP16 下的显存组成</title>
+                <desc id="f22-d">水平堆叠条总长约 100GB：参数约 14GB、梯度约 14GB、Adam 优化器状态约 56GB、激活值约 10 到 30GB。图中标出 A100 的 80GB 上限线，可见单张 80GB 卡在优化器状态叠加后就已超出。</desc>
+                <g font-family="'PingFang SC','Segoe UI',system-ui,sans-serif">
+                    <text x="60" y="34" font-size="11.5" fill="#334155">Llama-7B · FP16 训练的显存分布（教学示意，按文中表格数值推算）</text>
+                    <rect x="60" y="50" width="76" height="42" fill="#93c5fd" stroke="#2563eb"/>
+                    <rect x="136" y="50" width="76" height="42" fill="#fdba74" stroke="#ea580c"/>
+                    <rect x="212" y="50" width="302" height="42" fill="#86efac" stroke="#16a34a"/>
+                    <rect x="514" y="50" width="86" height="42" fill="#d8b4fe" stroke="#9333ea"/>
+                    <text x="174" y="76" font-size="10.5" fill="#075985" text-anchor="middle">梯度</text>
+                    <text x="363" y="76" font-size="11.5" fill="#166534" text-anchor="middle">Adam 优化器状态 ~56GB</text>
+                    <text x="557" y="76" font-size="10.5" fill="#6b21a8" text-anchor="middle">激活</text>
+                    <line x1="492" y1="42" x2="492" y2="108" stroke="#dc2626" stroke-width="2" stroke-dasharray="5 3"/>
+                    <text x="492" y="126" font-size="10.5" fill="#b91c1c" text-anchor="middle">A100 80GB 上限</text>
+                    <rect x="60" y="150" width="14" height="14" fill="#93c5fd" stroke="#2563eb"/>
+                    <text x="80" y="162" font-size="11" fill="#1e293b">参数 ~14GB</text>
+                    <rect x="175" y="150" width="14" height="14" fill="#fdba74" stroke="#ea580c"/>
+                    <text x="195" y="162" font-size="11" fill="#1e293b">梯度 ~14GB</text>
+                    <rect x="290" y="150" width="14" height="14" fill="#86efac" stroke="#16a34a"/>
+                    <text x="310" y="162" font-size="11" fill="#1e293b">优化器 ~56GB</text>
+                    <rect x="425" y="150" width="14" height="14" fill="#d8b4fe" stroke="#9333ea"/>
+                    <text x="445" y="162" font-size="11" fill="#1e293b">激活 10-30GB</text>
+                    <text x="60" y="194" font-size="11" fill="#334155">四项相加 ≈ 100GB：单张 A100（80GB）在最省模式下也仅能勉强放下 batch=1。</text>
+                    <text x="60" y="216" font-size="11" fill="#334155">FSDP 把前三项按 1/N 切片到各卡，激活值仍由各卡自己持有 → 这才是大模型能跑起来的关键。</text>
+                </g>
+            </svg>
+            <figcaption>Llama-7B 的参数、梯度、优化器状态、激活值四项堆叠起来大约 100GB，红色虚线是单张 A100 的 80GB 上限——还没算激活值就已超线。FSDP 把这前三个“每卡一份”的部分切成 <code>1/N</code>，所以显存随卡数下降；这也解释了为什么 LoRA 只省梯度/优化器，却救不了 70B 模型的参数加载。</figcaption>
+        </figure>
 
         <h2>22.2 FSDP1 vs FSDP2</h2>
 
@@ -256,6 +295,38 @@ optimizer.load_state_dict(state_dict["optimizer"])</code></pre>
             <li>模型超级大且有深层次结构 → FSDP + TP + PP（俗称3D并行）</li>
         </ul>
 
+        <div class="demo" role="group" aria-labelledby="d22-h">
+            <h4 id="d22-h">动手试一试：该用哪种并行策略</h4>
+            <p style="margin:6px 0;">根据模型相对单卡显存的大小，选一个情形，看推荐的并行组合（教学示意，对应 22.6 的决策思路）。</p>
+            <div class="controls">
+                <button type="button" data-c="fit" aria-pressed="false">能装进单卡</button>
+                <button type="button" data-c="over" aria-pressed="false">稍大于单卡</button>
+                <button type="button" data-c="huge" aria-pressed="false">远大于单卡，单层也大</button>
+                <button type="button" data-c="massive" aria-pressed="false">超级大且层次深</button>
+            </div>
+            <div class="out" id="d22-out" aria-live="polite">选择一个情形。</div>
+        </div>
+        <script>
+        (function () {
+            var out = document.getElementById('d22-out');
+            var info = {
+                fit:     ['DDP 即可', '每卡一份完整模型，只需把数据切开，实现最简单'],
+                over:    ['FSDP（2）', '参数/梯度/优化器状态按 1/N 切片，通信略高于 DDP'],
+                huge:    ['FSDP + TP', '单层本身就装不下，需用张量并行把权重按行/列切到多卡'],
+                massive: ['FSDP + TP + PP（3D 并行）', '模型既宽又深，再用流水线并行把层分成多个 stage']
+            };
+            var btns = document.querySelectorAll('.demo [data-c]');
+            btns.forEach(function (btn) {
+                btn.addEventListener('click', function () {
+                    btns.forEach(function (o) { o.setAttribute('aria-pressed', 'false'); });
+                    btn.setAttribute('aria-pressed', 'true');
+                    var v = info[btn.dataset.c];
+                    out.textContent = '情形：' + btn.textContent.trim() + '\n推荐方案：' + v[0] + '\n理由：' + v[1];
+                });
+            });
+        })();
+        </script>
+
         <h2>22.7 主流方案对比</h2>
 
         <table>
@@ -316,7 +387,7 @@ optimizer.load_state_dict(state_dict["optimizer"])</code></pre>
             <a href="index.html">📖 返回目录</a>
             <a href="23.html">下一章 →</a>
         </div>
-    </div>
+    </main>
 </div>
 </div>
 </body>
