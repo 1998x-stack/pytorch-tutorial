@@ -4,12 +4,21 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.5, user-scalable=yes">
     <title>第19章 torch.compile深度解析 — PyTorch 实战教程</title>
+    <style>
+        body { font-family: system-ui, -apple-system, 'PingFang SC', 'Segoe UI', sans-serif; line-height: 1.8; margin: 0; padding: 12px; }
+        .container, .main-content { min-width: 0; }
+        .main-content { overflow-x: auto; }
+        pre { overflow-x: auto; max-width: 100%; }
+        pre, code { font-family: 'JetBrains Mono', ui-monospace, monospace; }
+        table { max-width: 100%; }
+        img, svg { max-width: 100%; }
+    </style>
     <link rel="stylesheet" href="theme.css">
 </head>
 <body>
 <div class="double-border">
 <div class="container">
-    <div class="sidebar">
+    <nav class="sidebar" aria-label="课程目录">
         <h3>🔥 课程目录</h3>
         <ul class="chapter-list">
             <li><a href="01.html">第1章 初识PyTorch</a></li>
@@ -41,10 +50,10 @@
             <li><a href="27.html">第27章 实战项目：图像分类全流程</a></li>
             <li><a href="28.html">第28章 课程总结与学习路线</a></li>
         </ul>
-    </div>
-    <div class="main-content">
+    </nav>
+    <main class="main-content">
 
-        <h2>第19章 torch.compile深度解析</h2>
+        <h1>第19章 torch.compile深度解析</h1>
 
         <p>大家好，我是你们的讲师。如果过去三年只能选一个PyTorch最重要的新特性，我会毫不犹豫地投给 <code>torch.compile</code>。它代表了PyTorch从"define-by-run"的灵活框架向"高性能编译"方向迈出的最坚实一步。你不需要换API、不需要改模型结构，只需要在模型上包一层 <code>torch.compile()</code>，就能白嫖20%-200%的速度提升——听起来像童话，对吗？</p>
 
@@ -76,6 +85,38 @@ compiled_fn = torch.compile(my_function)
 result = compiled_fn(torch.randn(3), torch.randn(3))</code></pre>
 
         <p>上面这段代码会触发两个graph break（<code>print</code> 和 <code>if</code>），最终被切成三个子图。每个子图各自编译、各自执行。</p>
+
+        <div class="demo" role="group" aria-labelledby="d19-h">
+            <h4 id="d19-h">动手试一试：这段代码会 graph break 吗？</h4>
+            <p style="margin:6px 0;">逐个点击常见的 Python 写法，看 TorchDynamo 能不能把它纳入同一张计算图（教学示意）。</p>
+            <div class="controls">
+                <button type="button" data-c="print" aria-pressed="false">print(x.shape)</button>
+                <button type="button" data-c="if" aria-pressed="false">if x.sum() &gt; 0:</button>
+                <button type="button" data-c="where" aria-pressed="false">torch.where(cond, a, b)</button>
+                <button type="button" data-c="len" aria-pressed="false">len(x)</button>
+            </div>
+            <div class="out" id="d19-out" aria-live="polite">选择一个写法。</div>
+        </div>
+        <script>
+        (function () {
+            var out = document.getElementById('d19-out');
+            var info = {
+                print:  ['会 graph break', 'print 是 Python 副作用调用，Dynamo 必须停下来把值交回解释器'] ,
+                'if':   ['会 graph break', '条件值依赖张量数据（x.sum()），无法在编译期静态决定走哪支'] ,
+                where:  ['不会 graph break', 'torch.where 是纯张量操作，可以用 torch.where / torch.masked_select 替代数据依赖分支'] ,
+                len:    ['可能 graph break', 'len(x)、list(x) 会把张量转成 Python 容器，打破图连续性，阈值中等']
+            };
+            var btns = document.querySelectorAll('.demo [data-c]');
+            btns.forEach(function (btn) {
+                btn.addEventListener('click', function () {
+                    btns.forEach(function (o) { o.setAttribute('aria-pressed', 'false'); });
+                    btn.setAttribute('aria-pressed', 'true');
+                    var v = info[btn.dataset.c];
+                    out.textContent = btn.textContent.trim() + '\n结论：' + v[0] + '\n原因：' + v[1];
+                });
+            });
+        })();
+        </script>
 
         <h2>19.3 FX Graph：中间表示</h2>
 
@@ -161,6 +202,39 @@ print(traced.graph)
         <div class="warning">
             <strong>踩坑故事：</strong>有个朋友训练一个推荐模型，用 <code>torch.compile</code> 一加持，高兴地发现速度完全没变。debug了两天，最后发现他的 <code>forward</code> 函数开头有一行 <code>if x.is_cuda:</code> 的判断——这个if语句在每一个batch上都触发一次graph break！整个forward被切成了几十个小图，编译开销巨大，但实际执行效率还不如eager mode。去掉这行之后，加速比直接到了1.8x。
         </div>
+
+        <figure class="teach-fig">
+            <svg viewBox="0 0 620 230" role="img" aria-labelledby="f19-t f19-d">
+                <title id="f19-t">graph break 如何把一个 forward 切成多个子图</title>
+                <desc id="f19-d">一行 forward 里有五个操作，print 和数据依赖的 if 各触发一次 graph break，于是原本的一张大图被切成三个小子图，中间两次回到 Python 解释器，分别编译、各自 launch kernel。</desc>
+                <defs><marker id="f19-a" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto"><path d="M0,0 L6,3 L0,6 Z" fill="#dc2626"/></marker></defs>
+                <g font-family="'PingFang SC','Segoe UI',system-ui,sans-serif">
+                    <rect x="15" y="40" width="112" height="42" rx="7" fill="#dcfce7" stroke="#16a34a"/>
+                    <text x="71" y="66" font-size="11.5" fill="#166534" text-anchor="middle">z = x + y</text>
+                    <rect x="137" y="40" width="112" height="42" rx="7" fill="#fee2e2" stroke="#dc2626"/>
+                    <text x="193" y="66" font-size="11.5" fill="#991b1b" text-anchor="middle">print(z.shape)</text>
+                    <rect x="259" y="40" width="112" height="42" rx="7" fill="#dcfce7" stroke="#16a34a"/>
+                    <text x="315" y="66" font-size="11.5" fill="#166534" text-anchor="middle">w = z * 2</text>
+                    <rect x="381" y="40" width="112" height="42" rx="7" fill="#fee2e2" stroke="#dc2626"/>
+                    <text x="437" y="66" font-size="11.5" fill="#991b1b" text-anchor="middle">if w.sum()&gt;0</text>
+                    <rect x="503" y="40" width="112" height="42" rx="7" fill="#dcfce7" stroke="#16a34a"/>
+                    <text x="559" y="66" font-size="11.5" fill="#166534" text-anchor="middle">return -w</text>
+                    <line x1="133" y1="91" x2="133" y2="125" stroke="#dc2626" stroke-width="2" stroke-dasharray="4 3" marker-end="url(#f19-a)"/>
+                    <line x1="377" y1="91" x2="377" y2="125" stroke="#dc2626" stroke-width="2" stroke-dasharray="4 3" marker-end="url(#f19-a)"/>
+                    <rect x="15" y="128" width="112" height="34" rx="7" fill="#e0f2fe" stroke="#0284c7"/>
+                    <text x="71" y="150" font-size="11.5" fill="#075985" text-anchor="middle">子图 1</text>
+                    <rect x="259" y="128" width="112" height="34" rx="7" fill="#e0f2fe" stroke="#0284c7"/>
+                    <text x="315" y="150" font-size="11.5" fill="#075985" text-anchor="middle">子图 2</text>
+                    <rect x="503" y="128" width="112" height="34" rx="7" fill="#e0f2fe" stroke="#0284c7"/>
+                    <text x="559" y="150" font-size="11.5" fill="#075985" text-anchor="middle">子图 3</text>
+                    <text x="193" y="150" font-size="10.5" fill="#b91c1c" text-anchor="middle">graph break</text>
+                    <text x="437" y="150" font-size="10.5" fill="#b91c1c" text-anchor="middle">graph break</text>
+                    <text x="15" y="192" font-size="11" fill="#334155">续（绿色）= 可纳入编译图；红色 = 触发 graph break，结果交回 Python 解释器。</text>
+                    <text x="15" y="214" font-size="11" fill="#334155">断得越多，子图越小 → 融合机会越少、kernel launch 越多，加速比急剧下降。</text>
+                </g>
+            </svg>
+            <figcaption>同一个 <code>forward</code> 里，<code>print</code> 和数据依赖的 <code>if</code> 各切一刀，一张大图就变成三个小子图。子图之间必须回到 Python 解释器，这就是 19.5 开头那个“加了 compile 却没变快”的根本原因。</figcaption>
+        </figure>
 
         <h2>19.6 诊断 Graph Break</h2>
 
@@ -256,7 +330,7 @@ torch._logging.set_logs(dynamo=logging.DEBUG)</code></pre>
             <a href="index.html">📖 返回目录</a>
             <a href="20.html">下一章 →</a>
         </div>
-    </div>
+    </main>
 </div>
 </div>
 </body>
