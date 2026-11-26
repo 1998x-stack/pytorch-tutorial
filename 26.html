@@ -4,12 +4,21 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.5, user-scalable=yes">
     <title>第26章 PyTorch前沿发展 — PyTorch教程</title>
+    <style>
+        body { font-family: system-ui, -apple-system, 'PingFang SC', 'Segoe UI', sans-serif; line-height: 1.8; margin: 0; padding: 12px; }
+        .container, .main-content { min-width: 0; }
+        .main-content { overflow-x: auto; }
+        pre { overflow-x: auto; max-width: 100%; }
+        pre, code { font-family: 'JetBrains Mono', ui-monospace, monospace; }
+        table { max-width: 100%; }
+        img, svg { max-width: 100%; }
+    </style>
     <link rel="stylesheet" href="theme.css">
 </head>
 <body>
 <div class="double-border">
 <div class="container">
-    <div class="sidebar">
+    <nav class="sidebar" aria-label="课程目录">
         <h3>🔥 课程目录</h3>
         <ul class="chapter-list">
             <li><a href="01.html">第1章 初识PyTorch</a></li>
@@ -41,10 +50,10 @@
             <li><a href="27.html">第27章 实战项目：图像分类全流程</a></li>
             <li><a href="28.html">第28章 课程总结与学习路线</a></li>
         </ul>
-    </div>
-    <div class="main-content">
+    </nav>
+    <main class="main-content">
 
-<h2>第26章 PyTorch前沿发展</h2>
+<h1>第26章 PyTorch前沿发展</h1>
 
 <p>大家好，我是你们的讲师。不知不觉已经走到第26章了。如果你是从第一章一路学过来的，你此刻已经掌握了 PyTorch 从张量操作到分布式训练、从模型部署到性能分析的全套技能。但深度学习框架的发展日新月异——PyTorch 团队几乎每两个月就发布一个新版本，带来的新特性往往能彻底改变我们的工作方式。</p>
 
@@ -231,6 +240,31 @@ output = flex_attention(query, key, value, block_mask=block_mask)</code></pre>
 
 <p>MX 格式最大的特点是 <strong>按块（block）共享指数（shared exponent）</strong>。传统量化中每个数值有自己的指数位，但 MX 格式把一个 block（通常是 32 或 64 个元素）的指数合并成一个共享指数。这样虽然每个元素的精度降低了，但整体的动态范围被保留了下来。</p>
 
+<figure class="teach-fig">
+    <svg viewBox="0 0 620 190" role="img" aria-labelledby="f26-t f26-d">
+        <title id="f26-t">MX 格式的按块共享指数</title>
+        <desc id="f26-d">一个 block 内的多个元素各自只存 4 到 8 位尾数，它们共用同一个 8 位指数。共享指数保留了整块的动态范围，而每个元素的低位宽换来更高的压缩比。</desc>
+        <g font-family="'PingFang SC','Segoe UI',system-ui,sans-serif">
+            <text x="15" y="28" font-size="11.5" fill="#334155">一个 block（示例）内每个元素只存窄尾数：</text>
+            <rect x="60" y="40" width="30" height="34" fill="#bae6fd" stroke="#0284c7"/>
+            <rect x="92" y="40" width="30" height="34" fill="#bae6fd" stroke="#0284c7"/>
+            <rect x="124" y="40" width="30" height="34" fill="#bae6fd" stroke="#0284c7"/>
+            <rect x="156" y="40" width="30" height="34" fill="#bae6fd" stroke="#0284c7"/>
+            <rect x="188" y="40" width="30" height="34" fill="#bae6fd" stroke="#0284c7"/>
+            <rect x="220" y="40" width="30" height="34" fill="#bae6fd" stroke="#0284c7"/>
+            <rect x="252" y="40" width="30" height="34" fill="#bae6fd" stroke="#0284c7"/>
+            <rect x="284" y="40" width="30" height="34" fill="#bae6fd" stroke="#0284c7"/>
+            <text x="316" y="62" font-size="13" fill="#64748b">…</text>
+            <text x="340" y="62" font-size="11" fill="#075985">每个元素 4 位尾数（MXFP4）</text>
+            <rect x="60" y="102" width="254" height="34" rx="6" fill="#fdba74" stroke="#ea580c"/>
+            <text x="187" y="124" font-size="11.5" fill="#7c2d12" text-anchor="middle">共享指数 8 位（整个 block 共用）</text>
+            <text x="15" y="162" font-size="11" fill="#334155">省下的指数位 → 更高压缩比；共享指数 → 动态范围不丢。</text>
+            <text x="15" y="182" font-size="11" fill="#334155">这就是 MXFP4 能做到 8x 压缩（对比 FP32）的关键。</text>
+        </g>
+    </svg>
+    <figcaption>MX 与传统量化最大的区别就在中间这一条：<b>一个 block 共用同一个指数</b>。每个元素只保留窄尾数（降低精度），而共享指数把整块的动态范围保住——所以 MXFP4 能压到 4 位而不至于像单纯 FP4 那样轻易溢出。</figcaption>
+</figure>
+
 <pre><code>import torch
 
 # 创建一个 FP32 张量
@@ -254,6 +288,37 @@ print("反量化后与原始的误差:", (x_dq - x).abs().mean().item())</code><
 </div>
 
 <p>需要注意的是，MX 量化目前主要用于 <strong>推理</strong>。虽然理论上可以做 QAT（Quantization-Aware Training），但工具链还在完善中。对于大多数场景，推荐的做法是先用 FP32/FP16/BF16 训练模型，再用 <code>torch.mx.quantize</code> 对权重进行后训练量化（PTQ）。</p>
+
+<div class="demo" role="group" aria-labelledby="d26-h">
+    <h4 id="d26-h">动手试一试：MX 量化能把模型压到多小</h4>
+    <p style="margin:6px 0;">以一个 7B 参数模型为例（FP32 下约 28GB），选一种 MX 格式，看权重占用降到多少（教学示意，按元素位宽估算）。</p>
+    <div class="controls">
+        <button type="button" data-d="fp8" aria-pressed="false">MXFP8（8 位）</button>
+        <button type="button" data-d="fp6" aria-pressed="false">MXFP6（6 位）</button>
+        <button type="button" data-d="fp4" aria-pressed="false">MXFP4（4 位）</button>
+    </div>
+    <div class="out" id="d26-out" aria-live="polite">选择一种格式。</div>
+</div>
+<script>
+(function () {
+    var out = document.getElementById('d26-out');
+    var params = 7e9, fp32 = 28; // GB
+    var bits = { fp8: 8, fp6: 6, fp4: 4 };
+    var btns = document.querySelectorAll('.demo [data-d]');
+    btns.forEach(function (btn) {
+        btn.addEventListener('click', function () {
+            btns.forEach(function (o) { o.setAttribute('aria-pressed', 'false'); });
+            btn.setAttribute('aria-pressed', 'true');
+            var b = bits[btn.dataset.d];
+            var bytes = params * b / 8;
+            var gb = bytes / (1024 * 1024 * 1024);
+            out.textContent = '7B 参数 · ' + b + ' 位/元素\n' +
+                '权重约 ' + gb.toFixed(2) + ' GB\n' +
+                '对比 FP32 约 28GB → 压缩比约 ' + (28 / gb).toFixed(1) + 'x';
+        });
+    });
+})();
+</script>
 
 <h2>CUDA 13.0：PyTorch 的新引擎</h2>
 
@@ -355,7 +420,7 @@ print("x 的梯度:", x.grad)</code></pre>
             <a href="index.html">📖 返回目录</a>
             <a href="27.html">下一章 →</a>
         </div>
-    </div>
+    </main>
 </div>
 </div>
 </body>
