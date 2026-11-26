@@ -4,12 +4,21 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.5, user-scalable=yes">
     <title>第24章 Profiling与性能分析</title>
+    <style>
+        body { font-family: system-ui, -apple-system, 'PingFang SC', 'Segoe UI', sans-serif; line-height: 1.8; margin: 0; padding: 12px; }
+        .container, .main-content { min-width: 0; }
+        .main-content { overflow-x: auto; }
+        pre { overflow-x: auto; max-width: 100%; }
+        pre, code { font-family: 'JetBrains Mono', ui-monospace, monospace; }
+        table { max-width: 100%; }
+        img, svg { max-width: 100%; }
+    </style>
     <link rel="stylesheet" href="theme.css">
 </head>
 <body>
 <div class="double-border">
 <div class="container">
-    <div class="sidebar">
+    <nav class="sidebar" aria-label="课程目录">
         <h3>🔥 课程目录</h3>
         <ul class="chapter-list">
             <li><a href="01.html">第1章 初识PyTorch</a></li>
@@ -41,15 +50,15 @@
             <li><a href="27.html">第27章 实战项目：图像分类全流程</a></li>
             <li><a href="28.html">第28章 课程总结与学习路线</a></li>
         </ul>
-    </div>
-    <div class="main-content">
-        <h2>第24章 Profiling 与性能分析</h2>
+    </nav>
+    <main class="main-content">
+        <h1>第24章 Profiling 与性能分析</h1>
 
 <p>大家好，我是你们的讲师。在之前的章节里我们花了大量精力优化模型——混合精度训练、torch.compile、FSDP——但有没有想过一个问题：<strong>你怎么知道这些优化真正生效了？</strong> 更关键的是，如果训练还是慢，瓶颈到底在哪里？</p>
 
 <p>这就是 profiling 的价值所在。Profiling 不是可有可无的「加分项」，而是性能优化的罗盘。没有 profiling，你的优化就是在黑暗中乱撞——运气好撞到瓶颈提升了 2 倍，运气不好花了三天「优化」了一个根本不占时间的环节。这一章我会教你用好 torch.profiler，学会读懂 Chrome Trace 的火焰图，以及如何系统性地诊断性能瓶颈。</p>
 
-<h3>24.1 torch.profiler 基础用法</h3>
+<h2>24.1 torch.profiler 基础用法</h2>
 
 <p><code>torch.profiler</code> 是 PyTorch 官方提供的 profiling 工具，它可以记录算子级别的 CPU/GPU 执行时间、CUDA kernel 启动开销、内存分配情况等。它的 API 设计非常简洁：</p>
 
@@ -93,7 +102,7 @@ print(p.key_averages().table(
   <p><strong>预热的重要性</strong>：PyTorch 有 JIT 编译、CUDA graph 缓存等机制，前几个 step 的执行时间不能代表稳态性能。务必要配置 warmup 步数，通常 warmup=2 起步，对于 torch.compile 模型建议 warmup=5 以上。</p>
 </div>
 
-<h3>24.2 解读 Chrome Trace 时间线</h3>
+<h2>24.2 解读 Chrome Trace 时间线</h2>
 
 <p>调用 <code>tensorboard_trace_handler</code> 后，你会在日志目录下得到一个 <code>.json</code> 文件。用 Chrome 浏览器打开 <code>chrome://tracing</code>，加载这个文件，你会看到一条条彩色的时间线——每个矩形代表一个算子的执行。</p>
 
@@ -105,6 +114,36 @@ print(p.key_averages().table(
   <li><strong>CUDA 拷贝</strong>：标有 <code>memcpy</code> 或 <code>cudaMemcpy</code> 的条——主机与设备之间的数据传输。频繁的 H2D/D2H 拷贝往往是性能杀手</li>
   <li><strong>同步点</strong>：<code>cudaDeviceSynchronize</code> 或 <code>cudaStreamSynchronize</code> 通常是红色或橙色的长条，说明 CPU 在阻塞等待 GPU 完成</li>
 </ol>
+
+<figure class="teach-fig">
+    <svg viewBox="0 0 620 235" role="img" aria-labelledby="f24-t f24-d">
+        <title id="f24-t">Chrome Trace 时间线：CPU 与 GPU 两条泳道</title>
+        <desc id="f24-d">上方是时间轴。CPU 泳道上轮流出现 DataLoader 数据加载与 kernel launch；GPU 泳道上有两段 kernel 执行，中间出现一大段空闲，正好对应 CPU 还在 DataLoader 里搬数据的区间，说明 GPU 在等数据。</desc>
+        <g font-family="'PingFang SC','Segoe UI',system-ui,sans-serif">
+            <line x1="60" y1="38" x2="600" y2="38" stroke="#94a3b8"/>
+            <text x="60" y="30" font-size="10" fill="#64748b">时间 →</text>
+            <text x="15" y="78" font-size="11.5" font-weight="700" fill="#334155">CPU</text>
+            <rect x="60" y="58" width="150" height="32" fill="#fdba74" stroke="#ea580c"/>
+            <text x="135" y="79" font-size="10.5" fill="#7c2d12" text-anchor="middle">DataLoader</text>
+            <rect x="210" y="58" width="60" height="32" fill="#93c5fd" stroke="#2563eb"/>
+            <text x="240" y="79" font-size="10" fill="#1e3a8a" text-anchor="middle">launch</text>
+            <rect x="270" y="58" width="180" height="32" fill="#fdba74" stroke="#ea580c"/>
+            <text x="360" y="79" font-size="10.5" fill="#7c2d12" text-anchor="middle">DataLoader（还在搬数据）</text>
+            <rect x="450" y="58" width="60" height="32" fill="#93c5fd" stroke="#2563eb"/>
+            <text x="480" y="79" font-size="10" fill="#1e3a8a" text-anchor="middle">launch</text>
+            <text x="15" y="140" font-size="11.5" font-weight="700" fill="#334155">GPU</text>
+            <rect x="210" y="120" width="60" height="32" fill="#86efac" stroke="#16a34a"/>
+            <text x="240" y="141" font-size="10" fill="#166534" text-anchor="middle">kernel</text>
+            <rect x="270" y="120" width="180" height="32" fill="#f1f5f9" stroke="#cbd5e1" stroke-dasharray="4 3"/>
+            <text x="360" y="141" font-size="10.5" fill="#64748b" text-anchor="middle">GPU 空转（等不到数据）</text>
+            <rect x="450" y="120" width="60" height="32" fill="#86efac" stroke="#16a34a"/>
+            <text x="480" y="141" font-size="10" fill="#166534" text-anchor="middle">kernel</text>
+            <text x="60" y="182" font-size="11" fill="#334155">GPU 流上的空白与 CPU 的 DataLoader 区间上下对齐 → 瓶颈在数据管线，不在模型。</text>
+            <text x="60" y="204" font-size="11" fill="#334155">若空白对应的是 NCCL 长条，则是通信瓶颈；对应 cudaMalloc 则是显存碎片。</text>
+        </g>
+    </svg>
+    <figcaption>读 trace 的第一个方法是“上下对齐看”：CPU 泳道在忙什么，GPU 泳道就在等什么。图中 GPU 的大段空白与 CPU 的 <code>DataLoader</code> 区间完全对齐，一笔就判定是 I/O 瓶颈——这正是 24.6 决策树的第一行。</figcaption>
+</figure>
 
 <pre><code># 程序化读取 trace 文件
 import json
@@ -127,7 +166,7 @@ sorted_ops = sorted(durations.items(), key=lambda x: x[1], reverse=True)
 for name, dur in sorted_ops[:20]:
     print(f"{name}: {dur/1000:.2f} ms")</code></pre>
 
-<h3>24.3 内存分析：Memory Timeline 与 Snapshot</h3>
+<h2>24.3 内存分析：Memory Timeline 与 Snapshot</h2>
 
 <p>OOM（Out of Memory）是训练大模型时最常见的噩梦。torch.profiler 提供了两种内存分析工具：</p>
 
@@ -160,7 +199,7 @@ for seg in snapshot:
   <li>多次迭代后突然 OOM，但减小 batch size 没有帮助</li>
 </ul>
 
-<h3>24.4 通信瓶颈 vs 计算瓶颈</h3>
+<h2>24.4 通信瓶颈 vs 计算瓶颈</h2>
 
 <p>在分布式训练中，性能瓶颈通常分为两类：</p>
 
@@ -188,7 +227,39 @@ print(f"计算占比: {compute_time/total*100:.1f}%")
 print(f"通信占比: {nccl_time/total*100:.1f}%")
 # 如果通信占比 > 30%，你应该优先优化通信效率</code></pre>
 
-<h3>24.5 GPU 利用率与 SM Efficiency</h3>
+<div class="demo" role="group" aria-labelledby="d24-h">
+    <h4 id="d24-h">动手试一试：从 profiler 现象判瓶颈</h4>
+    <p style="margin:6px 0;">选一个 Chrome Trace / profiler 里常见的现象，看最可能的瓶颈类型和优先动作（教学示意，对应 24.6）。</p>
+    <div class="controls">
+        <button type="button" data-s="idle" aria-pressed="false">GPU 流大段空白</button>
+        <button type="button" data-s="nccl" aria-pressed="false">NCCL 占比 &gt; 30%</button>
+        <button type="button" data-s="malloc" aria-pressed="false">频繁 cudaMalloc / Free</button>
+        <button type="button" data-s="slow" aria-pressed="false">GPU 利用率高但很慢</button>
+    </div>
+    <div class="out" id="d24-out" aria-live="polite">选择一个现象。</div>
+</div>
+<script>
+(function () {
+    var out = document.getElementById('d24-out');
+    var info = {
+        idle:   ['I/O 数据加载瓶颈', '增加 num_workers、开启 pinned memory 与 prefetch_factor'],
+        nccl:   ['通信瓶颈', '开启梯度 overlap、增大 batch size、减少同步点'],
+        malloc: ['显存碎片化', '复位 caching allocator、避免动态 shape、减少临时张量'],
+        slow:   ['计算瓶颈 / 未用 Tensor Cores', '确保维度是 8 的倍数，改用 FP16/BF16，检查 cuBLAS 配置']
+    };
+    var btns = document.querySelectorAll('.demo [data-s]');
+    btns.forEach(function (btn) {
+        btn.addEventListener('click', function () {
+            btns.forEach(function (o) { o.setAttribute('aria-pressed', 'false'); });
+            btn.setAttribute('aria-pressed', 'true');
+            var v = info[btn.dataset.s];
+            out.textContent = '现象：' + btn.textContent.trim() + '\n瓶颈类型：' + v[0] + '\n优先动作：' + v[1];
+        });
+    });
+})();
+</script>
+
+<h2>24.5 GPU 利用率与 SM Efficiency</h2>
 
 <p>GPU 利用率（GPU Utilization）是一个宏观指标，但光看它不够——一个 GPU 利用率 100% 的机器，可能有一半的 SM（Streaming Multiprocessor）在空转。需要看更细粒度的指标：</p>
 
@@ -216,7 +287,7 @@ print(result.stdout)
   <p><strong>关键认知</strong>：GPU 利用率高 ≠ 程序效率高。一个糟糕实现的 kernel 可能让 GPU 一直忙，但做的有用工作很少。比如频繁的 <code>torch.numpy()</code> + <code>torch.from_numpy()</code> 会导致 CPU-GPU 同步，GPU 利用率的数字再好看也没用。真正的效率指标是 <strong>SM Efficiency</strong> 和 <strong>Computation Throughput</strong>。</p>
 </div>
 
-<h3>24.6 优化决策树</h3>
+<h2>24.6 优化决策树</h2>
 
 <p>面对一份 profiler 输出，你该怎么决定先优化哪个环节？以下是一个诊断决策树：</p>
 
@@ -234,7 +305,7 @@ print(result.stdout)
   <p><strong>A100 惨案</strong>：一个团队高高兴兴把 V100 集群升级到 A100，预期训练时间缩短 50%。结果一跑——只快了 10%。大家怀疑 A100 有问题，联系厂商、查驱动、换机型折腾了两周。最后还是 profiler 救了他们：Chrome Trace 显示 GPU 利用率只有 30%，大量的时间花在 DataLoader 的 <code>torchvision.transforms</code> 上。原来之前的 V100 上 DataLoader 就是瓶颈，但 V100 算力低，这个瓶颈被掩盖了。换了 A100 后，GPU 算力翻了几倍，DataLoader 的短板暴露无遗。修复方案：把 transforms 全部移到 GPU 上（用 <code>transforms.v2</code>），增加 num_workers，内存预加载——最终 1.8x 加速。记住：<strong>升级硬件前，先 profile 你的管线</strong>。</p>
 </div>
 
-<h3>24.7 建立 profiling 的习惯</h3>
+<h2>24.7 建立 profiling 的习惯</h2>
 
 <p>Profiling 不应该在性能出问题了才想起它。我建议你建立以下习惯：</p>
 
@@ -277,7 +348,7 @@ def profile_run(model, dataloader, steps=50, log_dir="./profiles"):
             <a href="index.html">📖 返回目录</a>
             <a href="25.html">下一章 →</a>
         </div>
-    </div>
+    </main>
 </div>
 </div>
 </body>

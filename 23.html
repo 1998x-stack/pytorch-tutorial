@@ -4,12 +4,21 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.5, user-scalable=yes">
     <title>第23章 模型部署与导出</title>
+    <style>
+        body { font-family: system-ui, -apple-system, 'PingFang SC', 'Segoe UI', sans-serif; line-height: 1.8; margin: 0; padding: 12px; }
+        .container, .main-content { min-width: 0; }
+        .main-content { overflow-x: auto; }
+        pre { overflow-x: auto; max-width: 100%; }
+        pre, code { font-family: 'JetBrains Mono', ui-monospace, monospace; }
+        table { max-width: 100%; }
+        img, svg { max-width: 100%; }
+    </style>
     <link rel="stylesheet" href="theme.css">
 </head>
 <body>
 <div class="double-border">
 <div class="container">
-    <div class="sidebar">
+    <nav class="sidebar" aria-label="课程目录">
         <h3>🔥 课程目录</h3>
         <ul class="chapter-list">
             <li><a href="01.html">第1章 初识PyTorch</a></li>
@@ -41,15 +50,15 @@
             <li><a href="27.html">第27章 实战项目：图像分类全流程</a></li>
             <li><a href="28.html">第28章 课程总结与学习路线</a></li>
         </ul>
-    </div>
-    <div class="main-content">
-        <h2>第23章 模型部署与导出</h2>
+    </nav>
+    <main class="main-content">
+        <h1>第23章 模型部署与导出</h1>
 
 <p>大家好，我是你们的讲师。到了第23章，咱们要聊一个非常务实的话题：模型部署与导出。前面22章，你训练了各种模型，调了超参数，做了迁移学习，甚至在多卡上跑了FSDP——但如果你的模型只能在你的训练脚本里跑，那它跟躺在学术论文里的"玩具"没什么两样。模型的价值在于被使用，而部署就是那道"最后一公里"的桥梁。</p>
 
 <p>PyTorch 的模型导出历史上走过不少弯路。从最早的 TorchScript tracing 到 scripting，再到后来的 torch.fx，最后到现在的 torch.export——这条路几乎是一部"后悔药"的发展史。这一章我会带你理清这些概念，掌握正确的导出姿势，以及如何把模型送到 ONNX Runtime、TorchServe 等生产环境。</p>
 
-<h3>23.1 TorchScript 的遗产：为什么 deprecated 了</h3>
+<h2>23.1 TorchScript 的遗产：为什么 deprecated 了</h2>
 
 <p>TorchScript 曾经是 PyTorch 官方主推的部署方案。它的思路很直白：你把 Python 代码"编译"成一种静态的 IR（Intermediate Representation），然后脱离 Python 解释器运行。听起来很美好，但实践中处处是坑。</p>
 
@@ -69,7 +78,7 @@ scripted = torch.jit.script(model)                # scripting 要求纯 Python �
   <p><strong>现状</strong>：PyTorch 2.x 之后官方已将 TorchScript 标记为 deprecated，推荐使用 <code>torch.export</code> 作为导出方案。如果你在维护老项目，尽量规划迁移；新项目一律不要碰 TorchScript。</p>
 </div>
 
-<h3>23.2 torch.export：新一代导出方案</h3>
+<h2>23.2 torch.export：新一代导出方案</h2>
 
 <p><code>torch.export</code> 是 PyTorch 2.x 推出的新一代导出机制。它基于 TorchDynamo 捕获计算图，生成的 ExportedProgram 是一个完整的、self-contained 的静态图描述，包含参数、buffer、gradient 信息——而且可读性远超 TorchScript。</p>
 
@@ -108,7 +117,33 @@ result = exported_program.module()(torch.randn(1, 784))</code></pre>
 
 <p><code>torch.export</code> 的核心优势在于：它不走 Python 解释器，而是直接基于 TorchDynamo 的 Guard 机制捕获 FX Graph，然后在 FX 图上做 Dead Code Elimination、常量折叠等优化。最终产物是一个纯的、确定性的计算图，没有 Python 相关的副作用。</p>
 
-<h3>23.3 Programmatic Capture：capture_pre_autograd</h3>
+<figure class="teach-fig">
+    <svg viewBox="0 0 620 240" role="img" aria-labelledby="f23-t f23-d">
+        <title id="f23-t">根据部署目标选择导出方案</title>
+        <desc id="f23-d">左侧是 PyTorch 模型，右侧三条分支：若继续在 PyTorch 生态内运行则用 torch.export 得到 ExportedProgram；若要跨框架部署则导出 ONNX 交给 ONNX Runtime 或 TensorRT；若面向移动与边缘则叠加 INT8 量化与轻量运行时。</desc>
+        <defs><marker id="f23-a" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto"><path d="M0,0 L6,3 L0,6 Z" fill="#475569"/></marker></defs>
+        <g font-family="'PingFang SC','Segoe UI',system-ui,sans-serif">
+            <rect x="20" y="85" width="150" height="70" rx="10" fill="#f1f5f9" stroke="#475569"/>
+            <text x="95" y="116" font-size="12.5" font-weight="700" fill="#334155" text-anchor="middle">PyTorch 模型</text>
+            <text x="95" y="138" font-size="10.5" fill="#64748b" text-anchor="middle">训练好 / .pth</text>
+            <line x1="172" y1="110" x2="246" y2="48" stroke="#475569" stroke-width="1.5" marker-end="url(#f23-a)"/>
+            <line x1="172" y1="120" x2="246" y2="120" stroke="#475569" stroke-width="1.5" marker-end="url(#f23-a)"/>
+            <line x1="172" y1="132" x2="246" y2="192" stroke="#475569" stroke-width="1.5" marker-end="url(#f23-a)"/>
+            <rect x="250" y="20" width="355" height="56" rx="9" fill="#dcfce7" stroke="#16a34a"/>
+            <text x="264" y="44" font-size="12" font-weight="700" fill="#166534">torch.export → ExportedProgram</text>
+            <text x="264" y="64" font-size="11" fill="#14532d">目标：继续在 PyTorch 内运行、还想再编译优化</text>
+            <rect x="250" y="92" width="355" height="56" rx="9" fill="#e0f2fe" stroke="#0284c7"/>
+            <text x="264" y="116" font-size="12" font-weight="700" fill="#075985">ONNX → Runtime / TensorRT / OpenVINO</text>
+            <text x="264" y="136" font-size="11" fill="#0c4a6e">目标：跨框架、跨硬件部署（瑞士军刀）</text>
+            <rect x="250" y="164" width="355" height="56" rx="9" fill="#fef3c7" stroke="#d97706"/>
+            <text x="264" y="188" font-size="12" font-weight="700" fill="#92400e">量化（INT8）+ 轻量运行时</text>
+            <text x="264" y="208" font-size="11" fill="#78350f">目标：移动/边缘设备、低延迟低功耗</text>
+        </g>
+    </svg>
+    <figcaption>导出没有“最好”，只有“适合哪个运行时”。左边同一个 PyTorch 模型，三条分支对应三类部署目标：在 PyTorch 生态内继续跑用 <code>torch.export</code>；要交给其他框架/推理引擎走 ONNX；而面向移动端则再叠加 INT8 量化。先想清楚“模型最终在哪里跑”，再选导出格式。</figcaption>
+</figure>
+
+<h2>23.3 Programmatic Capture：capture_pre_autograd</h2>
 
 <p>有些场景下，你需要在 Autograd 之前「截获」计算图进行自定义转换。比如你想把某些算子替换成量化版本，或者在图中插入 profiling 点。这时候就需要 <code>torch._export.capture_pre_autograd</code>（也称为 programmatic capture）。</p>
 
@@ -135,7 +170,7 @@ final_export = export.export(transformed_graph, example_inputs)</code></pre>
   <p><strong>注意</strong>：<code>capture_pre_autograd</code> 是实验性 API，API 签名在不同 PyTorch 版本间可能有变化。生产环境使用前请确认你的 PyTorch 版本文档。</p>
 </div>
 
-<h3>23.4 ONNX 导出：跨框架部署的瑞士军刀</h3>
+<h2>23.4 ONNX 导出：跨框架部署的瑞士军刀</h2>
 
 <p>不是所有生产环境都跑 PyTorch。你可能需要在 TensorRT、ONNX Runtime、OpenVINO 甚至手机上跑你的模型。这时候 ONNX（Open Neural Network Exchange）就是你的最佳选择。</p>
 
@@ -179,7 +214,7 @@ result = session.run(None, {input_name: dummy_input.numpy()})</code></pre>
   <p><strong>建议</strong>：从 PyTorch 2.1 开始，推荐先用 <code>torch.export.export()</code> 得到 ExportedProgram，再调用 <code>torch.onnx.export(exported_program, ...)</code> 转 ONNX。这种方式生成的 ONNX 图更干净，兼容性更好。</p>
 </div>
 
-<h3>23.5 TorchServe 快速入门</h3>
+<h2>23.5 TorchServe 快速入门</h2>
 
 <p>TorchServe 是 PyTorch 官方的模型服务框架。它帮你处理 HTTP 请求、批量推理、模型版本管理——你只需要提供一个 model 文件和一个 handler 脚本。</p>
 
@@ -230,7 +265,7 @@ class MyHandler(BaseHandler):
         # 将输出转为 JSON 可序列化格式
         return output.softmax(dim=-1).tolist()</code></pre>
 
-<h3>23.6 训练后量化（Post-Training Quantization）</h3>
+<h2>23.6 训练后量化（Post-Training Quantization）</h2>
 
 <p>量化是将模型权重/激活值从 FP32 或 FP16 降到 INT8（甚至更低），以换取推理速度和模型体积的优化。PTQ 不需要重新训练，直接在训练好的模型上操作。</p>
 
@@ -271,7 +306,7 @@ print(f"量化模型推理时间: {(time.time()-start)/100*1000:.2f} ms")</code>
   <p><strong>推荐路线</strong>：先从 Dynamic Quantization 开始——它只需要改一行代码，精度损失几乎为零。如果还不够快，再尝试 Static Quantization。QAT 只在精度要求极高且前两者不满足时才考虑。</p>
 </div>
 
-<h3>23.7 torch.compile 推理优化：别忘了 mode="reduce-overhead"</h3>
+<h2>23.7 torch.compile 推理优化：别忘了 mode="reduce-overhead"</h2>
 
 <p>torch.compile 不只是训练加速器，也是推理服务端的利器。但在推理场景下，你必须指定 <code>mode="reduce-overhead"</code>，否则可能适得其反。</p>
 
@@ -300,7 +335,7 @@ for name, m in [("eager", model), ("default", compiled_default), ("reduce-overhe
   <p><strong>踩坑实录</strong>：有团队把训练时 torch.compile 的配置直接搬到生产推理服务中，发现推理比训练还慢 2 倍。折腾了一周才发现是因为默认 mode 为了保留训练所需的梯度信息，做了额外的 graph break。切换到 <code>mode="reduce-overhead"</code> 后直接恢复到了应有的推理速度。记住：<strong>训练和推理的 torch.compile 配置不能混用</strong>。</p>
 </div>
 
-<h3>23.8 导出后验证清单</h3>
+<h2>23.8 导出后验证清单</h2>
 
 <p>模型导出之后，有几件事你务必确认：</p>
 
@@ -318,6 +353,38 @@ exported_out = exported_program.module()(dummy_input)
 max_diff = (original_out - exported_out).abs().max().item()
 assert max_diff < 1e-3, f"最大差异 {max_diff} 超出阈值"</code></pre>
 
+<div class="demo" role="group" aria-labelledby="d23-h">
+    <h4 id="d23-h">动手试一试：该导出成哪种格式</h4>
+    <p style="margin:6px 0;">选一个部署目标，看推荐的导出方式与验证重点（教学示意）。</p>
+    <div class="controls">
+        <button type="button" data-g="py" aria-pressed="false">纯 PyTorch 服务</button>
+        <button type="button" data-g="onnx" aria-pressed="false">TensorRT 跨框架</button>
+        <button type="button" data-g="edge" aria-pressed="false">手机 / 边缘设备</button>
+        <button type="button" data-g="dyn" aria-pressed="false">需要变长输入</button>
+    </div>
+    <div class="out" id="d23-out" aria-live="polite">选择一个目标。</div>
+</div>
+<script>
+(function () {
+    var out = document.getElementById('d23-out');
+    var info = {
+        py:   ['torch.export → ExportedProgram', '重点验证最大误差 < 1e-3、冷启动时间'],
+        onnx: ['torch.onnx.export（opset ≥ 17）', '重点验证算子兼容性与 ONNX Runtime 数值一致'],
+        edge: ['量化 INT8 + 轻量运行时', '重点验证精度损失与低延迟 SLA'],
+        dyn:  ['导出时声明 dynamic_axes / 动态 shape', '重点验证多个 batch/序列长度均可用']
+    };
+    var btns = document.querySelectorAll('.demo [data-g]');
+    btns.forEach(function (btn) {
+        btn.addEventListener('click', function () {
+            btns.forEach(function (o) { o.setAttribute('aria-pressed', 'false'); });
+            btn.setAttribute('aria-pressed', 'true');
+            var v = info[btn.dataset.g];
+            out.textContent = '目标：' + btn.textContent.trim() + '\n推荐导出：' + v[0] + '\n验证重点：' + v[1];
+        });
+    });
+})();
+</script>
+
 <p>到这里，你应该能熟练地把 PyTorch 模型导出为多种格式，并且部署到生产环境中了。下一章我们聊一个非常重要但经常被忽视的话题——Profiling 与性能分析。你会发现，有时候模型本身不是瓶颈，问题出在你根本没想到的地方。</p>
 
         <div class="footer-nav">
@@ -325,7 +392,7 @@ assert max_diff < 1e-3, f"最大差异 {max_diff} 超出阈值"</code></pre>
             <a href="index.html">📖 返回目录</a>
             <a href="24.html">下一章 →</a>
         </div>
-    </div>
+    </main>
 </div>
 </div>
 </body>
