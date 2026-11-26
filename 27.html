@@ -4,12 +4,21 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.5, user-scalable=yes">
     <title>第27章 实战项目：图像分类全流程 — PyTorch教程</title>
+    <style>
+        body { font-family: system-ui, -apple-system, 'PingFang SC', 'Segoe UI', sans-serif; line-height: 1.8; margin: 0; padding: 12px; }
+        .container, .main-content { min-width: 0; }
+        .main-content { overflow-x: auto; }
+        pre { overflow-x: auto; max-width: 100%; }
+        pre, code { font-family: 'JetBrains Mono', ui-monospace, monospace; }
+        table { max-width: 100%; }
+        img, svg { max-width: 100%; }
+    </style>
     <link rel="stylesheet" href="theme.css">
 </head>
 <body>
 <div class="double-border">
 <div class="container">
-    <div class="sidebar">
+    <nav class="sidebar" aria-label="课程目录">
         <h3>🔥 课程目录</h3>
         <ul class="chapter-list">
             <li><a href="01.html">第1章 初识PyTorch</a></li>
@@ -41,10 +50,10 @@
             <li><a href="27.html" class="active">第27章 实战项目：图像分类全流程</a></li>
             <li><a href="28.html">第28章 课程总结与学习路线</a></li>
         </ul>
-    </div>
-    <div class="main-content">
+    </nav>
+    <main class="main-content">
 
-<h2>第27章 实战项目：图像分类全流程</h2>
+<h1>第27章 实战项目：图像分类全流程</h1>
 
 <p>大家好，我是你们的讲师。如果你已经学完了前面 26 章的内容，那理论层面的储备已经非常充足了。但深度学习是一项实践性极强的技能——纸上谈兵永远不够。这一章我们要做一个完整的实战项目，把前面学到的所有知识串联起来。</p>
 
@@ -53,6 +62,40 @@
 <p>让我先分享一个真实的故事。我有一个学生，在学完前面 25 章后自己做了一个图像分类项目。第一次跑的时候准确率只有 45%，比随机猜测（1%）好一些，但离可用还差得远。后来他回来找我说"老师，我是不是不适合做深度学习？"我帮他看了一遍代码，发现问题很多：数据增强太弱、没有用预训练模型、学习率设置不合理、跑了 10 个 epoch 就停了。我带着他一步一步调整，从数据预处理到训练策略，最终准确率达到了 87%。他说了一句话我印象很深："原来不是我不行，是我还没掌握正确的方法。"这一章，我就把这些正确的方法全部教给你。</p>
 
 <p>好，让我们开始这个项目。</p>
+
+<figure class="teach-fig">
+    <svg viewBox="0 0 620 200" role="img" aria-labelledby="f27-t f27-d">
+        <title id="f27-t">图像分类项目的七个步骤</title>
+        <desc id="f27-d">上排四步：数据探索、模型架构、训练配置、超参调优；下排三步：评估可视化、导出推理、性能基准。顺序与本章 Step 1 到 Step 7 一致。</desc>
+        <defs><marker id="f27-a" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto"><path d="M0,0 L6,3 L0,6 Z" fill="#64748b"/></marker></defs>
+        <g font-family="'PingFang SC','Segoe UI',system-ui,sans-serif">
+            <rect x="15" y="36" width="140" height="52" rx="9" fill="#e0f2fe" stroke="#0284c7"/>
+            <text x="85" y="58" font-size="11" font-weight="700" fill="#075985" text-anchor="middle">① 数据探索</text>
+            <text x="85" y="76" font-size="10" fill="#0c4a6e" text-anchor="middle">类别分布 / 样本</text>
+            <rect x="165" y="36" width="140" height="52" rx="9" fill="#bae6fd" stroke="#0284c7"/>
+            <text x="235" y="58" font-size="11" font-weight="700" fill="#075985" text-anchor="middle">② 模型架构</text>
+            <text x="235" y="76" font-size="10" fill="#0c4a6e" text-anchor="middle">自定义 CNN / 迁移</text>
+            <rect x="315" y="36" width="140" height="52" rx="9" fill="#fde68a" stroke="#d97706"/>
+            <text x="385" y="58" font-size="11" font-weight="700" fill="#92400e" text-anchor="middle">③ 训练配置</text>
+            <text x="385" y="76" font-size="10" fill="#78350f" text-anchor="middle">compile + AMP</text>
+            <rect x="465" y="36" width="140" height="52" rx="9" fill="#fdba74" stroke="#ea580c"/>
+            <text x="535" y="58" font-size="11" font-weight="700" fill="#7c2d12" text-anchor="middle">④ 超参调优</text>
+            <text x="535" y="76" font-size="10" fill="#7c2d12" text-anchor="middle">每次只改一个</text>
+            <line x1="535" y1="92" x2="85" y2="112" stroke="#64748b" stroke-width="1.5" stroke-dasharray="4 3" marker-end="url(#f27-a)"/>
+            <rect x="15" y="116" width="140" height="52" rx="9" fill="#dcfce7" stroke="#16a34a"/>
+            <text x="85" y="138" font-size="11" font-weight="700" fill="#166534" text-anchor="middle">⑤ 评估可视化</text>
+            <text x="85" y="156" font-size="10" fill="#14532d" text-anchor="middle">混淆矩阵 / 每类</text>
+            <rect x="165" y="116" width="140" height="52" rx="9" fill="#86efac" stroke="#16a34a"/>
+            <text x="235" y="138" font-size="11" font-weight="700" fill="#166534" text-anchor="middle">⑥ 导出推理</text>
+            <text x="235" y="156" font-size="10" fill="#14532d" text-anchor="middle">torch.export</text>
+            <rect x="315" y="116" width="140" height="52" rx="9" fill="#a7f3d0" stroke="#16a34a"/>
+            <text x="385" y="138" font-size="11" font-weight="700" fill="#166534" text-anchor="middle">⑦ 性能基准</text>
+            <text x="385" y="156" font-size="10" fill="#14532d" text-anchor="middle">准确率 / 速度对比</text>
+            <text x="15" y="188" font-size="10.5" fill="#64748b">虚线表示一轮完成后再进入下一轮：调优与评估常常需要回到③④反复迭代。</text>
+        </g>
+    </svg>
+    <figcaption>一个图像分类项目的完整闭环：从数据探索到性能基准共七步。注意图中虚线——实际做项目时，超参调优（④）与评估（⑤）会来回迭代多次，而不是一次走完。</figcaption>
+</figure>
 
 <h2>Step 1：数据探索与预处理</h2>
 
@@ -467,6 +510,46 @@ print("预测类别:", raw_dataset.classes[predicted_class.item()])</code></pre>
     </tbody>
 </table>
 
+<div class="demo" role="group" aria-labelledby="d27-h">
+    <h4 id="d27-h">动手试一试：哪种配置最划算</h4>
+    <p style="margin:6px 0;">逐个点击不同配置，对比准确率、每 epoch 训练时间与显存（数值取自本章 Step 7 的基准表）。</p>
+    <div class="controls">
+        <button type="button" data-c="eager" aria-pressed="false">Eager (FP32)</button>
+        <button type="button" data-c="compile" aria-pressed="false">compile (FP32)</button>
+        <button type="button" data-c="amp" aria-pressed="false">compile + AMP</button>
+        <button type="button" data-c="transfer" aria-pressed="false">迁移学习 + AMP</button>
+    </div>
+    <div class="out" id="d27-out" aria-live="polite">选择一个配置。</div>
+</div>
+<script>
+(function () {
+    var out = document.getElementById('d27-out');
+    var cfg = {
+        eager:   ['72.4%', '12.3s', '3.2 GB'],
+        compile: ['72.8%', '7.8s',  '3.8 GB'],
+        amp:     ['72.5%', '5.1s',  '2.1 GB'],
+        transfer:['87.1%', '9.5s',  '2.6 GB']
+    };
+    var note = {
+        eager:   '基准线，无优化',
+        compile: '准确率几乎不变，速度约 +37%',
+        amp:     '再提速约 35%，显存降低约 45%',
+        transfer:'准确率提升最大（+15%），需全部微调'
+    };
+    var btns = document.querySelectorAll('.demo [data-c]');
+    btns.forEach(function (btn) {
+        btn.addEventListener('click', function () {
+            btns.forEach(function (o) { o.setAttribute('aria-pressed', 'false'); });
+            btn.setAttribute('aria-pressed', 'true');
+            var v = cfg[btn.dataset.c];
+            out.textContent = btn.textContent.trim() + '\n测试准确率：' + v[0] +
+                '\n每 epoch 时间：' + v[1] + '\n显存占用：' + v[2] +
+                '\n备注：' + note[btn.dataset.c];
+        });
+    });
+})();
+</script>
+
 <div class="highlight">
     <strong>关键发现：</strong>
     <ul>
@@ -486,7 +569,7 @@ print("预测类别:", raw_dataset.classes[predicted_class.item()])</code></pre>
             <a href="index.html">📖 返回目录</a>
             <a href="28.html">下一章 →</a>
         </div>
-    </div>
+    </main>
 </div>
 </div>
 </body>
