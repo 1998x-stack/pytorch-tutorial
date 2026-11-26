@@ -4,12 +4,21 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.5, user-scalable=yes">
     <title>第18章 可复现性与实验管理 — PyTorch教程</title>
+    <style>
+        body { font-family: system-ui, -apple-system, 'PingFang SC', 'Segoe UI', sans-serif; line-height: 1.8; margin: 0; padding: 12px; }
+        .container, .main-content { min-width: 0; }
+        .main-content { overflow-x: auto; }
+        pre { overflow-x: auto; max-width: 100%; }
+        pre, code { font-family: 'JetBrains Mono', ui-monospace, monospace; }
+        table { max-width: 100%; }
+        img, svg { max-width: 100%; }
+    </style>
     <link rel="stylesheet" href="theme.css">
 </head>
 <body>
 <div class="double-border">
 <div class="container">
-    <div class="sidebar">
+    <nav class="sidebar" aria-label="课程目录">
         <h3>🔥 课程目录</h3>
         <ul class="chapter-list">
             <li><a href="01.html">第1章 初识PyTorch</a></li>
@@ -41,10 +50,10 @@
             <li><a href="27.html">第27章 实战项目：图像分类全流程</a></li>
             <li><a href="28.html">第28章 课程总结与学习路线</a></li>
         </ul>
-    </div>
-    <div class="main-content">
+    </nav>
+    <main class="main-content">
 
-<h2>第18章 可复现性与实验管理</h2>
+<h1>第18章 可复现性与实验管理</h1>
 
 <p>大家好，我是你们的讲师。今天的话题可能不如模型结构或者训练技巧那么"酷"，但它的重要性绝对不容低估——<strong>可复现性（Reproducibility）与实验管理</strong>。</p>
 
@@ -52,7 +61,7 @@
 
 <p>这一章我会从最基础的随机种子设置讲起，然后讨论 deterministic 模式、实验配置管理、模型版本化和 checkpoint 命名策略。我会尽量给出可以直接用在项目中的模板代码。</p>
 
-<h3>18.1 设置所有随机种子</h3>
+<h2>18.1 设置所有随机种子</h2>
 
 <p>很多人以为设置种子就是跑一行 <code>torch.manual_seed(42)</code>。但实际上，"全"种子意味着你要对代码中所有可能引入随机性的环节都设置种子。下面这个函数几乎是我所有 PyTorch 项目的标准开头：</p>
 
@@ -78,7 +87,37 @@ set_all_seeds(42)</code></pre>
 
 <p>注意：<code>PYTHONHASHSEED</code> 必须在进程启动时设置才生效，不能像其他种子那样在代码中间设置。通常的做法是在调用脚本前设置：<code>PYTHONHASHSEED=42 python train.py</code>，或者在脚本的最高处（在 import 任何东西之前）设置。</p>
 
-<h3>18.2 torch.use_deterministic_algorithms()</h3>
+<figure class="teach-fig">
+    <svg viewBox="0 0 620 250" role="img" aria-labelledby="f18-t f18-d">
+        <title id="f18-t">训练中需要分别管理的随机性来源</title>
+        <desc id="f18-d">左列为需要设置的种子或接口，右列为其影响的随机性。“全种子”意味着给 PyTorch CPU、PyTorch GPU、NumPy、Python 标准库、PYTHONHASHSEED 以及 DataLoader 的 shuffle 都单独指定种子，漏掉任何一项都可能造成结果不可复现。</desc>
+        <g font-family="'PingFang SC','Segoe UI',system-ui,sans-serif">
+            <text x="130" y="24" font-size="12" font-weight="700" fill="#334155" text-anchor="middle">需要显式设置的种子/接口</text>
+            <text x="440" y="24" font-size="12" font-weight="700" fill="#334155" text-anchor="middle">它控制的随机性</text>
+            <rect x="15" y="36" width="230" height="30" rx="6" fill="#e0f2fe" stroke="#0284c7"/>
+            <text x="27" y="56" font-size="11.5" fill="#075985">torch.manual_seed(seed)</text>
+            <text x="262" y="56" font-size="11" fill="#1e293b">PyTorch CPU 张量初始化与 dropout</text>
+            <rect x="15" y="72" width="230" height="30" rx="6" fill="#e0f2fe" stroke="#0284c7"/>
+            <text x="27" y="92" font-size="11.5" fill="#075985">torch.cuda.manual_seed_all(seed)</text>
+            <text x="262" y="92" font-size="11" fill="#1e293b">所有 GPU 上的随机数状态</text>
+            <rect x="15" y="108" width="230" height="30" rx="6" fill="#e0f2fe" stroke="#0284c7"/>
+            <text x="27" y="128" font-size="11.5" fill="#075985">np.random.seed(seed)</text>
+            <text x="262" y="128" font-size="11" fill="#1e293b">NumPy 数据增强 / 切分</text>
+            <rect x="15" y="144" width="230" height="30" rx="6" fill="#e0f2fe" stroke="#0284c7"/>
+            <text x="27" y="164" font-size="11.5" fill="#075985">random.seed(seed)</text>
+            <text x="262" y="164" font-size="11" fill="#1e293b">Python 标准库的 random 模块</text>
+            <rect x="15" y="180" width="230" height="30" rx="6" fill="#fde68a" stroke="#d97706"/>
+            <text x="27" y="200" font-size="11.5" fill="#92400e">PYTHONHASHSEED</text>
+            <text x="262" y="200" font-size="11" fill="#1e293b">set/dict 遍历顺序（需启动前设置）</text>
+            <rect x="15" y="216" width="230" height="30" rx="6" fill="#fde68a" stroke="#d97706"/>
+            <text x="27" y="236" font-size="11.5" fill="#92400e">DataLoader(generator=g)</text>
+            <text x="262" y="236" font-size="11" fill="#1e293b">每个 epoch 的 shuffle 数据顺序</text>
+        </g>
+    </svg>
+    <figcaption>“设置所有种子”其实是一张清单：蓝色四项都在 <code>set_all_seeds()</code> 内一次性完成，而黄色两项（<code>PYTHONHASHSEED</code> 和 <code>DataLoader</code> 的 <code>generator</code>）最容易被漏掉——后面 18.6 那个“3% 正负差距”的故事就出在最后一行。</figcaption>
+</figure>
+
+<h2>18.2 torch.use_deterministic_algorithms()</h2>
 
 <p>设置种子只能保证"随机数序列"相同，但不能保证所有的浮点运算都是确定性的。比如某些 CUDA 卷积实现使用了原子加法（atomic add），这会导致每次 forward 的微小差异——即使输入完全相同。</p>
 
@@ -121,7 +160,7 @@ torch.backends.cudnn.deterministic = True</code></pre>
     <strong>一个重要警告：</strong>并不是所有的 PyTorch 操作都有确定性实现。某些操作（如 <code>torch.nn.functional.interpolate</code> 的某些模式、<code>torch.scatter_reduce</code> 等）在启用 <code>use_deterministic_algorithms(True)</code> 时会抛出 <code>RuntimeError</code>。如果你的代码中包含这些操作，你可能不得不接受不确定性——或者寻找替代实现。
 </div>
 
-<h3>18.3 cudnn.deterministic vs cudnn.benchmark</h3>
+<h2>18.3 cudnn.deterministic vs cudnn.benchmark</h2>
 
 <p>这两个选项是有冲突的，不能同时开启：</p>
 
@@ -153,7 +192,7 @@ else:
     torch.backends.cudnn.benchmark = True
     set_all_seeds(args.seed)</code></pre>
 
-<h3>18.4 Config Dict 模式：替代 argparse</h3>
+<h2>18.4 Config Dict 模式：替代 argparse</h2>
 
 <p>随着实验数量的增加，用 <code>argparse</code> 管理超参数会变得越来越痛苦。每个实验有一套不同的参数，你完全记不住哪个实验用了什么参数。推荐使用 <strong>Config Dict</strong> 模式——用一个 Python dict 保存所有配置，序列化后随模型一起保存。</p>
 
@@ -199,7 +238,7 @@ def train(config):
     <strong>YAML 也可以：</strong>很多团队喜欢用 YAML 文件来管理配置。PyTorch 社区中常见的做法是 <code>config.yaml</code> + <code>yaml.safe_load()</code> 来读取。两种方式都可以，关键原则是：<strong>配置必须与实验结果一起保存</strong>——不能只保存模型权重而不保存配置，否则这个模型权重基本就是废的。
 </div>
 
-<h3>18.5 模型版本化与 Checkpoint 命名</h3>
+<h2>18.5 模型版本化与 Checkpoint 命名</h2>
 
 <p>我不建议用 <code>model_final.pth</code>、<code>model_final_v2.pth</code> 这种命名方式。当你有 20 个实验的时候，这些名字完全无法帮助你区分。一个实用的命名策略是包含以下信息：</p>
 
@@ -248,7 +287,7 @@ def save_checkpoint(model, optimizer, config, epoch, metrics, path):
 
 <p>这样的文件名看一眼就能知道是什么时候跑的、哪个代码版本、精度如何。配合 <code>config</code> 保存，你打开 checkpoint 文件就能拿到实验的完整配置。</p>
 
-<h3>18.6 可复现性检查清单</h3>
+<h2>18.6 可复现性检查清单</h2>
 
 <p>为了方便查阅，我整理了一份综合检查清单。每次开始一个重要的实验前，可以逐项对照：</p>
 
@@ -320,6 +359,44 @@ def save_checkpoint(model, optimizer, config, epoch, metrics, path):
     </tr>
 </table>
 
+<div class="demo" role="group" aria-labelledby="d18-h">
+    <h4 id="d18-h">动手试一试：可复现性覆盖度自检</h4>
+    <p style="margin:6px 0;">点击切换每个随机性来源是否已被固定，看看你的实验“锁定度”。每一项对应上面清单里的一行（教学示意）。</p>
+    <div class="controls">
+        <button type="button" data-k="torch" aria-pressed="false">torch 种子</button>
+        <button type="button" data-k="cuda" aria-pressed="false">CUDA 种子</button>
+        <button type="button" data-k="numpy" aria-pressed="false">NumPy 种子</button>
+        <button type="button" data-k="hash" aria-pressed="false">PYTHONHASHSEED</button>
+        <button type="button" data-k="loader" aria-pressed="false">DataLoader generator</button>
+    </div>
+    <div class="out" id="d18-out" aria-live="polite">尚未固定任何来源。</div>
+</div>
+<script>
+(function () {
+    var out = document.getElementById('d18-out');
+    var btns = document.querySelectorAll('.demo [data-k]');
+    function refresh() {
+        var on = 0, missing = [];
+        btns.forEach(function (b) {
+            var pressed = b.getAttribute('aria-pressed') === 'true';
+            if (pressed) { on++; } else { missing.push(b.textContent.trim()); }
+        });
+        var level = on === btns.length ? '高：结果基本可复现'
+            : on >= 3 ? '中：大部分随机源已固定，仍可能飘动'
+            : '低：结果很可能不可复现';
+        out.textContent = '已固定 ' + on + '/' + btns.length + ' 项，锁定度：' + level +
+            (missing.length ? '\n仍待处理：' + missing.join('、') : '\n全部已处理');
+    }
+    btns.forEach(function (btn) {
+        btn.addEventListener('click', function () {
+            var pressed = btn.getAttribute('aria-pressed') === 'true';
+            btn.setAttribute('aria-pressed', pressed ? 'false' : 'true');
+            refresh();
+        });
+    });
+})();
+</script>
+
 <div class="warning">
     <strong>关于 "随机种子改 3%" 的真实故事：</strong>
     我有一位朋友在 NeurIPS 2023 投稿前做了一组对比实验。新方法比 baseline 高了 3% 的 accuracy，这是一个非常性感的结果。他很兴奋地写完了论文。但提交前的最后一天，他决定再跑一次确认——结果新方法的 accuracy 降了 2%，baseline 反而高了 1%。两次结果差了 3%。
@@ -341,7 +418,7 @@ dataloader = DataLoader(dataset, shuffle=True, generator=g)</code></pre>
             <a href="index.html">📖 返回目录</a>
             <a href="19.html">下一章 →</a>
         </div>
-    </div>
+    </main>
 </div>
 </div>
 </body>

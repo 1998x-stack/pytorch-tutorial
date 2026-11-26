@@ -4,12 +4,21 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.5, user-scalable=yes">
     <title>第17章 性能优化基础 — PyTorch教程</title>
+    <style>
+        body { font-family: system-ui, -apple-system, 'PingFang SC', 'Segoe UI', sans-serif; line-height: 1.8; margin: 0; padding: 12px; }
+        .container, .main-content { min-width: 0; }
+        .main-content { overflow-x: auto; }
+        pre { overflow-x: auto; max-width: 100%; }
+        pre, code { font-family: 'JetBrains Mono', ui-monospace, monospace; }
+        table { max-width: 100%; }
+        img, svg { max-width: 100%; }
+    </style>
     <link rel="stylesheet" href="theme.css">
 </head>
 <body>
 <div class="double-border">
 <div class="container">
-    <div class="sidebar">
+    <nav class="sidebar" aria-label="课程目录">
         <h3>🔥 课程目录</h3>
         <ul class="chapter-list">
             <li><a href="01.html">第1章 初识PyTorch</a></li>
@@ -41,10 +50,10 @@
             <li><a href="27.html">第27章 实战项目：图像分类全流程</a></li>
             <li><a href="28.html">第28章 课程总结与学习路线</a></li>
         </ul>
-    </div>
-    <div class="main-content">
+    </nav>
+    <main class="main-content">
 
-<h2>第17章 性能优化基础</h2>
+<h1>第17章 性能优化基础</h1>
 
 <p>大家好，我是你们的讲师。这一章我们来聊聊每个深度学习工程师都关心的话题——<strong>性能优化</strong>。</p>
 
@@ -52,7 +61,7 @@
 
 <p>好消息是，从 PyTorch 2.0 开始，许多加速手段变得越来越简单。这一章我们会从最"暴力"的 <code>torch.compile()</code> 开始，然后逐步深入到 cuDNN 调优、GPU 内存管理、DataLoader 瓶颈排查，以及 fuse optimizer 等高级技巧。</p>
 
-<h3>17.1 torch.compile()：一行代码的魔法</h3>
+<h2>17.1 torch.compile()：一行代码的魔法</h2>
 
 <p>如果要评选 PyTorch 2.x 时代最重要的特性，<code>torch.compile()</code> 绝对排第一。它把 Python 层面的 PyTorch 代码在运行时编译成高效的 GPU 内核，带来 30%~80% 甚至更高的加速——而你的改动仅仅是<strong>一行代码</strong>。</p>
 
@@ -79,7 +88,34 @@ for batch in dataloader:
 
 <p>最终的效果就是：Python 解释器的开销被降到了最低，访存模式被优化了，GPU 利用率大幅提升。</p>
 
-<h3>17.2 mode= 参数的选择</h3>
+<figure class="teach-fig">
+    <svg viewBox="0 0 620 190" role="img" aria-labelledby="f17-t f17-d">
+        <title id="f17-t">torch.compile 的三个编译阶段</title>
+        <desc id="f17-d">左到右三个阶段：Graph Capture 运行一次捕获 Python 操作成计算图；Graph Lowering 把高级操作分解为原子算子并做融合与消除；Triton Kernel Generation 为融合后的算子生成高性能内核。下方注释说明最终收益是降低解释器开销并提升 GPU 利用率。</desc>
+        <defs><marker id="f17-arrow" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto"><path d="M0,0 L6,3 L0,6 Z" fill="#64748b"/></marker></defs>
+        <g font-family="'PingFang SC','Segoe UI',system-ui,sans-serif">
+            <rect x="15" y="40" width="162" height="70" rx="10" fill="#e0f2fe" stroke="#0284c7"/>
+            <text x="96" y="66" font-size="12.5" font-weight="700" fill="#075985" text-anchor="middle">① Graph Capture</text>
+            <text x="96" y="86" font-size="11" fill="#0c4a6e" text-anchor="middle">运行一次，把 Python</text>
+            <text x="96" y="101" font-size="11" fill="#0c4a6e" text-anchor="middle">操作捕获成计算图</text>
+            <rect x="228" y="40" width="162" height="70" rx="10" fill="#fef3c7" stroke="#d97706"/>
+            <text x="309" y="66" font-size="12.5" font-weight="700" fill="#92400e" text-anchor="middle">② Graph Lowering</text>
+            <text x="309" y="86" font-size="11" fill="#78350f" text-anchor="middle">分解为原子算子，</text>
+            <text x="309" y="101" font-size="11" fill="#78350f" text-anchor="middle">融合与消除冗余计算</text>
+            <rect x="441" y="40" width="162" height="70" rx="10" fill="#dcfce7" stroke="#16a34a"/>
+            <text x="522" y="66" font-size="12.5" font-weight="700" fill="#166534" text-anchor="middle">③ Triton Kernel</text>
+            <text x="522" y="86" font-size="11" fill="#14532d" text-anchor="middle">为融合算子生成</text>
+            <text x="522" y="101" font-size="11" fill="#14532d" text-anchor="middle">高性能 GPU 内核</text>
+            <line x1="179" y1="75" x2="224" y2="75" stroke="#64748b" stroke-width="2" marker-end="url(#f17-arrow)"/>
+            <line x1="392" y1="75" x2="437" y2="75" stroke="#64748b" stroke-width="2" marker-end="url(#f17-arrow)"/>
+            <text x="15" y="142" font-size="11" fill="#334155">首次调用会付出编译开销（秒到小时不等，取决于 mode）；后续每次前向都复用同一份编译结果。</text>
+            <text x="15" y="164" font-size="11" fill="#334155">最终收益：解释器开销↓ + 算子融合减少显存往返 + 访存模式优化 → GPU 利用率↑。</text>
+        </g>
+    </svg>
+    <figcaption><code>torch.compile()</code> 的三段式流水线。左侧捕获、中间降级与融合、右侧生成内核。理解这三个阶段就能明白：为什么<b>首次运行慢、后续变快</b>，以及为什么 input shape 变化会触发重编译（对应 17.3 的 <code>dynamic=True</code>）。</figcaption>
+</figure>
+
+<h2>17.2 mode= 参数的选择</h2>
 
 <p><code>torch.compile()</code> 提供了三个 mode 选项，在不同场景下有不同的权衡：</p>
 
@@ -121,7 +157,7 @@ model_default = torch.compile(model, mode="default")
 model_balanced = torch.compile(model, mode="reduce-overhead")
 model_fastest  = torch.compile(model, mode="max-autotone")</code></pre>
 
-<h3>17.3 dynamic=True：处理变长输入</h3>
+<h2>17.3 dynamic=True：处理变长输入</h2>
 
 <p><code>torch.compile()</code> 默认假定输入张量的形状是固定的——这对于静态图优化非常有利。但如果你处理的是 NLP 模型或者时间序列数据，输入长度可能会随着每个 batch 变化。这时候需要设置 <code>dynamic=True</code>：</p>
 
@@ -133,7 +169,7 @@ model_fastest  = torch.compile(model, mode="max-autotone")</code></pre>
     <strong>什么时候用 dynamic=True？</strong>当你的模型有变长输入（如文本、序列数据、不同尺寸的图像），且你会使用 <code>torch.nn.utils.rnn.pad_sequence</code> 或类似的 padding 机制时。如果输入形状固定（如图像分类的 224x224），保持 <code>dynamic=False</code>（默认）以获得最佳性能。
 </div>
 
-<h3>17.4 cuDNN Benchmark：自动调优的加速与代价</h3>
+<h2>17.4 cuDNN Benchmark：自动调优的加速与代价</h2>
 
 <p>另一个简单的加速方式：<code>torch.backends.cudnn.benchmark = True</code>。这个选项会在第一次运行卷积操作时，对当前输入尺寸做基准测试，选择最有效的卷积算法。对于固定输入尺寸的模型（如大多数图像分类模型），它可以带来 10%~30% 的加速。</p>
 
@@ -152,7 +188,7 @@ if args.deterministic:
 else:
     torch.backends.cudnn.benchmark = True</code></pre>
 
-<h3>17.5 GPU 内存管理</h3>
+<h2>17.5 GPU 内存管理</h2>
 
 <p>显存是训练中的稀缺资源。PyTorch 用到了 CUDA 的缓存分配器——即使你用 <code>del</code> 删除了一个 Tensor，它占用的显存也不会立即释放给系统，而是被缓存在 CUDA 分配器中，以便后续的 Tensor 快速复用。这是为了提高性能，因为频繁向驱动申请/释放显存是很慢的。</p>
 
@@ -184,7 +220,7 @@ print(f"Cached: {torch.cuda.memory_reserved() / 1024**3:.2f} GB")
     </ol>
 </div>
 
-<h3>17.6 DataLoader 瓶颈排查</h3>
+<h2>17.6 DataLoader 瓶颈排查</h2>
 
 <p>很多时候你的 GPU 利用率不高，不是因为模型计算不够快，而是因为 <strong>GPU 在等 CPU 喂数据</strong>。这就是 I/O 瓶颈。</p>
 
@@ -235,7 +271,38 @@ print(f"Cached: {torch.cuda.memory_reserved() / 1024**3:.2f} GB")
     <strong>一个常见的 DataLoader 误用：</strong>如果你在 <code>__getitem__</code> 中做了大量的数据增强（如随机裁剪、颜色抖动等），这些操作会在 worker 进程中执行。如果 <code>num_workers</code> 太少，这些计算密集型操作会成为瓶颈。一个常用的优化是将一部分数据增强操作（如图片解码）放到 worker 里，另一部分（如 ToTensor、Normalize）放到 DataLoader 的 <code>collate_fn</code> 之前或者 GPU 上做。
 </div>
 
-<h3>17.7 Fused Optimizer：更高效的参数更新</h3>
+<div class="demo" role="group" aria-labelledby="d17-h">
+    <h4 id="d17-h">动手试一试：num_workers 与 GPU 利用率</h4>
+    <p style="margin:6px 0;">在某个视频理解任务中，CPU 每个 batch 的数据加载耗时固定，GPU 计算耗时也固定。调节 <code>num_workers</code> 看 GPU 是“吃饱”还是在等数据（教学示意，非真实基准）。</p>
+    <div class="controls">
+        <button type="button" data-w="0" aria-pressed="false">num_workers = 0</button>
+        <button type="button" data-w="2" aria-pressed="false">num_workers = 2</button>
+        <button type="button" data-w="4" aria-pressed="false">num_workers = 4</button>
+        <button type="button" data-w="8" aria-pressed="false">num_workers = 8</button>
+    </div>
+    <div class="out" id="d17-out" aria-live="polite">选择一个 num_workers 值。</div>
+</div>
+<script>
+(function () {
+    var out = document.getElementById('d17-out');
+    var loadTime = 40, gpuTime = 15; // 教学示意：单位 ms
+    var btns = document.querySelectorAll('.demo [data-w]');
+    btns.forEach(function (btn) {
+        btn.addEventListener('click', function () {
+            btns.forEach(function (o) { o.setAttribute('aria-pressed', 'false'); });
+            btn.setAttribute('aria-pressed', 'true');
+            var w = +btn.dataset.w;
+            var feed = w === 0 ? loadTime : loadTime / Math.min(w, 4);
+            var util = Math.min(100, Math.round(gpuTime / Math.max(gpuTime, feed) * 100));
+            var diag = feed > gpuTime ? '数据加载是瓶颈 → GPU 在空转等待' : '数据供给跟得上 → GPU 接近满负荷';
+            out.textContent = '数据供给耗时 ≈ ' + feed.toFixed(0) + ' ms/step，GPU 计算耗时 ≈ ' + gpuTime + ' ms/step\n' +
+                '估算 GPU 利用率 ≈ ' + util + '%\n' + diag;
+        });
+    });
+})();
+</script>
+
+<h2>17.7 Fused Optimizer：更高效的参数更新</h2>
 
 <p>从 PyTorch 2.12 开始，官方的 Adam（以及 SGD）已经支持 fused 实现。这个选项将多个独立的 CUDA kernel 调用合并成一个，减少了 kernel launch 开销，在更新大量小参数时效果尤为明显。</p>
 
@@ -289,7 +356,7 @@ optimizer = torch.optim.SGD(
             <a href="index.html">📖 返回目录</a>
             <a href="18.html">下一章 →</a>
         </div>
-    </div>
+    </main>
 </div>
 </div>
 </body>
