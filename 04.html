@@ -505,6 +505,15 @@ print(linear.bias.grad)    # tensor([[...]])
 
 <p>理解自动求导是理解 PyTorch 训练流程的钥匙。有了这个基础，下一章我们就可以开始<strong>构建第一个真正的神经网络</strong>了——不再是单独的 Tensor 运算，而是把层（Layer）堆叠成一个完整的模型。下一章见！</p>
 
+        <section class="references" aria-labelledby="refs-04">
+            <h2 id="refs-04">参考资料与延伸阅读</h2>
+            <p>本章关于动态计算图与反向传播的说明，可对照下列官方资料核实。</p>
+            <ul>
+                <li><a href="https://pytorch.org/docs/stable/notes/autograd.html">Autograd mechanics</a>——计算图、梯度累积与 <code>requires_grad</code> 的权威说明。</li>
+                <li><a href="https://pytorch.org/docs/stable/generated/torch.autograd.grad.html"><code>torch.autograd.grad</code></a>——只求梯度、不累加到 <code>.grad</code> 的接口。</li>
+                <li><a href="https://pytorch.org/docs/stable/generated/torch.Tensor.backward.html"><code>Tensor.backward</code></a>——反向传播的入口与参数语义。</li>
+            </ul>
+        </section>
         <div class="footer-nav">
             <a href="03.html">← 上一章</a>
             <a href="index.html">📖 返回目录</a>
