@@ -431,6 +431,15 @@ Epoch 200, Loss: 0.011269
 
 <p>现在我们已经集齐了训练一个神经网络需要的所有元素：数据、模型、损失函数、优化器。下一章我们要做的是把这些零件<strong>组装成一个完整的、工业级的训练流程</strong>——包括训练/验证/测试的划分、学习率调度器、模型评估、以及那个著名的"我忘了调 model.eval()"的故事。下一章见！</p>
 
+        <section class="references" aria-labelledby="refs-06">
+            <h2 id="refs-06">参考资料与延伸阅读</h2>
+            <p>本章关于损失函数与优化器更新规则的说明，可对照下列官方资料核实。</p>
+            <ul>
+                <li><a href="https://pytorch.org/docs/stable/nn.html#loss-functions">Loss functions 列表</a>——各损失函数的定义与参数。</li>
+                <li><a href="https://pytorch.org/docs/stable/optim.html">torch.optim</a>——SGD/Adam 的更新公式与 <code>zero_grad</code> 语义。</li>
+                <li><a href="https://pytorch.org/tutorials/beginner/basics/optimization_tutorial.html">优化循环教程</a>——参数更新循环的标准写法。</li>
+            </ul>
+        </section>
         <div class="footer-nav">
             <a href="05.html">← 上一章</a>
             <a href="index.html">📖 返回目录</a>

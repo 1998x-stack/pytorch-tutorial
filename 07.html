@@ -571,6 +571,15 @@ print(tracker.get_last("train", "loss"))  # 0.35</code></pre>
 
 <p>下一章我们将进入<strong>数据加载与预处理</strong>的专题——如何使用 DataLoader、Dataset、数据增强等工具来高效地管理和处理数据。在真实项目中，数据准备的时间往往比模型训练还要长，掌握这些技能会让你事半功倍。下一章见！</p>
 
+        <section class="references" aria-labelledby="refs-07">
+            <h2 id="refs-07">参考资料与延伸阅读</h2>
+            <p>本章关于训练/验证划分与学习率调度的说明，可对照下列官方资料核实。</p>
+            <ul>
+                <li><a href="https://pytorch.org/tutorials/beginner/basics/optimization_tutorial.html">优化与训练循环教程</a>——官方的最小可运行训练模板。</li>
+                <li><a href="https://pytorch.org/docs/stable/optim.html#how-to-adjust-learning-rate">如何调整学习率</a>——各类 <code>lr_scheduler</code> 的语义与调用顺序。</li>
+                <li><a href="https://pytorch.org/docs/stable/data.html#torch.utils.data.random_split"><code>random_split</code></a>——数据集划分的常用工具。</li>
+            </ul>
+        </section>
         <div class="footer-nav">
             <a href="06.html">← 上一章</a>
             <a href="index.html">📖 返回目录</a>
