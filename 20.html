@@ -306,6 +306,15 @@ def _(ctx, input):
             <strong>下章预告：</strong>当一个模型大到单卡装不下、训练慢到无法忍受时，你需要的是分布式训练。下一章我们进入分布式世界，从数据并行到模型并行，从 <code>torchrun</code> 到DDP，把单机多卡训练的完整流程讲透。
         </div>
 
+        <section class="references" aria-labelledby="refs-20">
+            <h2 id="refs-20">参考资料与延伸阅读</h2>
+            <p>本章关于自定义层、autograd Function 与自定义算子的说明，可对照下列官方资料核实。</p>
+            <ul>
+                <li><a href="https://pytorch.org/docs/stable/notes/extending.html">Extending PyTorch</a>——自定义 <code>autograd.Function</code> 的标准写法。</li>
+                <li><a href="https://pytorch.org/docs/stable/library.html">torch.library</a>——注册自定义算子的现代接口。</li>
+                <li><a href="https://pytorch.org/docs/stable/notes/custom_operators.html">Custom operators 说明</a>——与 <code>torch.compile</code> 的兼容要点。</li>
+            </ul>
+        </section>
         <div class="footer-nav">
             <a href="19.html">← 上一章</a>
             <a href="index.html">📖 返回目录</a>

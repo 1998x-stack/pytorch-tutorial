@@ -325,6 +325,15 @@ torch._logging.set_logs(dynamo=logging.DEBUG)</code></pre>
             <strong>小结：</strong>torch.compile 是PyTorch 2.x 时代的核心能力。理解 TorchDynamo 的图捕获、FX Graph 的中间表示、TorchInductor 的代码生成，以及最重要的 graph break 概念，你才能真正用好这个工具。下一章，我们将从"用现成的"转向"自己造"——学习如何编写自定义层和算子，让你的模型不再受限于PyTorch内置的操作。
         </div>
 
+        <section class="references" aria-labelledby="refs-19">
+            <h2 id="refs-19">参考资料与延伸阅读</h2>
+            <p>本章关于 TorchDynamo 图捕获与 graph break 的说明，可对照下列官方资料核实。</p>
+            <ul>
+                <li><a href="https://pytorch.org/docs/stable/torch.compiler.html">torch.compiler 指南</a>——图捕获、后端与图中断的整体设计。</li>
+                <li><a href="https://pytorch.org/docs/stable/generated/torch.compile.html"><code>torch.compile</code> API</a>——<code>fullgraph</code>、<code>dynamic</code> 等参数语义。</li>
+                <li><a href="https://pytorch.org/docs/stable/torch.compiler_faq.html">compiler FAQ</a>——常见报错与图中断排查。</li>
+            </ul>
+        </section>
         <div class="footer-nav">
             <a href="18.html">← 上一章</a>
             <a href="index.html">📖 返回目录</a>

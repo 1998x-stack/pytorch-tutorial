@@ -413,6 +413,15 @@ dataloader = DataLoader(dataset, shuffle=True, generator=g)</code></pre>
 
 <p>下一章我们来探索一个更"酷"的话题——<strong>torch.compile 深度解析</strong>。我们在第 17 章只是简单了解了它的用法，下一章会深入它的底层原理：TorchDynamo、AOTAutograd、TorchInductor 三个关键组件各自做了什么，以及如何用 <code>torch.compile</code> 的高级选项来精细控制编译行为。下一章见！</p>
 
+        <section class="references" aria-labelledby="refs-18">
+            <h2 id="refs-18">参考资料与延伸阅读</h2>
+            <p>本章关于随机种子与确定性算法的说明，可对照下列官方资料核实。</p>
+            <ul>
+                <li><a href="https://pytorch.org/docs/stable/notes/randomness.html">Reproducibility</a>——种子、确定性算法与非确定性来源。</li>
+                <li><a href="https://pytorch.org/docs/stable/generated/torch.use_deterministic_algorithms.html"><code>use_deterministic_algorithms</code></a>——确定性模式的开关与限制。</li>
+                <li><a href="https://pytorch.org/docs/stable/generated/torch.manual_seed.html"><code>torch.manual_seed</code></a>——为 CPU/GPU 设定随机种子。</li>
+            </ul>
+        </section>
         <div class="footer-nav">
             <a href="17.html">← 上一章</a>
             <a href="index.html">📖 返回目录</a>

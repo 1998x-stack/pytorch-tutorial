@@ -351,6 +351,15 @@ optimizer = torch.optim.SGD(
 
 <p>下一章我们来聊一个"没有 glory 但非常重要"的话题——<strong>可复现性与实验管理</strong>。你做的实验能让别人（或者三个月后的自己）复现吗？如果不能，那你做的实验价值就大打折扣了。</p>
 
+        <section class="references" aria-labelledby="refs-17">
+            <h2 id="refs-17">参考资料与延伸阅读</h2>
+            <p>本章关于 <code>torch.compile</code> 入门与显存管理的说明，可对照下列官方资料核实；性能数字为教学示意。</p>
+            <ul>
+                <li><a href="https://pytorch.org/docs/stable/torch.compiler.html">torch.compile 文档</a>——模式、后端与缓存机制。</li>
+                <li><a href="https://pytorch.org/docs/stable/notes/cuda.html">CUDA 语义说明</a>——<code>cudnn.benchmark</code> 与内存分配器行为。</li>
+                <li><a href="https://pytorch.org/docs/stable/profiler.html">torch.profiler</a>——定位性能瓶颈的官方接口。</li>
+            </ul>
+        </section>
         <div class="footer-nav">
             <a href="16.html">← 上一章</a>
             <a href="index.html">📖 返回目录</a>
