@@ -349,6 +349,15 @@ with autocast(device_type="cuda", dtype=dtype):
 
 <p>下一章我们来聊一个同样重要但常常被忽视的话题：<strong>训练陷阱与调试</strong>。训练 loss 不下降、出现 NaN、模型不收敛——这些问题是每个炼丹师都会遇到的噩梦。下一章我们会总结一份"查毒手册"，让你遇到问题不再抓瞎。下一章见！</p>
 
+        <section class="references" aria-labelledby="refs-15">
+            <h2 id="refs-15">参考资料与延伸阅读</h2>
+            <p>本章关于 FP16/BF16 位布局与梯度缩放机制的说明，可对照下列官方资料与论文核实；示例中的动态范围与溢出阀值为教学示意。</p>
+            <ul>
+                <li><a href="https://pytorch.org/docs/stable/amp.html">Automatic Mixed Precision</a>——<code>autocast</code> 与 <code>GradScaler</code> 的权威说明。</li>
+                <li><a href="https://arxiv.org/abs/1710.03740">Mixed Precision Training（2017）</a>—— FP16 训练与损失缩放的原始论文。</li>
+                <li><a href="https://pytorch.org/docs/stable/notes/numerical_accuracy.html">数值精度说明</a>——不同浮点格式的范围与精度对比。</li>
+            </ul>
+        </section>
         <div class="footer-nav">
             <a href="14.html">← 上一章</a>
             <a href="index.html">📖 返回目录</a>
