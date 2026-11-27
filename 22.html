@@ -382,6 +382,15 @@ optimizer.load_state_dict(state_dict["optimizer"])</code></pre>
             <strong>下章预告：</strong>模型训练好了，怎么把它部署到生产环境？下一章我们进入模型部署与导出环节，学习如何把PyTorch模型导出为TorchScript、ONNX，以及如何用TensorRT进行推理优化，让模型真正为产品服务。
         </div>
 
+        <section class="references" aria-labelledby="refs-22">
+            <h2 id="refs-22">参考资料与延伸阅读</h2>
+            <p>本章关于 fully_shard / ZeRO 分片与检查点分片的说明，可对照下列官方资料与论文核实。</p>
+            <ul>
+                <li><a href="https://pytorch.org/docs/stable/fsdp.html">FullyShardedDataParallel</a>——分片策略与 API。</li>
+                <li><a href="https://pytorch.org/docs/stable/distributed.checkpoint.html">distributed.checkpoint</a>——分片检查点的保存与恢复。</li>
+                <li><a href="https://arxiv.org/abs/1910.02054">ZeRO（2020）</a>——参数/梯度/优化器状态分片的原始论文。</li>
+            </ul>
+        </section>
         <div class="footer-nav">
             <a href="21.html">← 上一章</a>
             <a href="index.html">📖 返回目录</a>

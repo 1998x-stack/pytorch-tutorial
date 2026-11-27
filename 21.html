@@ -345,6 +345,15 @@ if __name__ == "__main__":
             <strong>下章预告：</strong>DDP解决了"数据太大"的问题，但解决不了"模型太大"的问题。当你的模型大到单卡连参数都放不下时，就需要更激进的手段——FSDP（Fully Sharded Data Parallel）。下一章我们进入大模型训练的世界，看看怎么把Llama-70B这样的巨无霸在多卡上跑起来。
         </div>
 
+        <section class="references" aria-labelledby="refs-21">
+            <h2 id="refs-21">参考资料与延伸阅读</h2>
+            <p>本章关于 DDP 进程组、梯度同步与多 GPU 训练的说明，可对照下列官方资料核实。</p>
+            <ul>
+                <li><a href="https://pytorch.org/docs/stable/distributed.html">torch.distributed</a>——进程组、后端与集合通信原语。</li>
+                <li><a href="https://pytorch.org/docs/stable/notes/ddp.html">DDP 说明</a>——all-reduce 同步与多进程创建方式。</li>
+                <li><a href="https://pytorch.org/docs/stable/generated/torch.nn.parallel.DistributedDataParallel.html">DistributedDataParallel</a>——包装与参数语义。</li>
+            </ul>
+        </section>
         <div class="footer-nav">
             <a href="20.html">← 上一章</a>
             <a href="index.html">📖 返回目录</a>
