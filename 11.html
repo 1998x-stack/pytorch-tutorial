@@ -319,6 +319,15 @@ checkpoint = torch.load('model.pth', weights_only=True)
 
 <p>这一章我们学习了模型保存与加载的核心知识：state_dict 和完整保存的优劣对比、checkpoint 的标准设计模式、跨设备加载的 map_location 方案、weights_only 的安全保护，以及版本兼容性问题。掌握了这些，你就能安全地在不同环境间迁移训练任务，也能自信地和他人分享你的模型权重。下一章我们来看训练技巧——学习率调度、初始化策略、梯度裁剪等实战调参经验。</p>
 
+        <section class="references" aria-labelledby="refs-11">
+            <h2 id="refs-11">参考资料与延伸阅读</h2>
+            <p>本章关于 <code>state_dict</code>、检查点与跨设备加载的说明，可对照下列官方资料核实。</p>
+            <ul>
+                <li><a href="https://pytorch.org/tutorials/beginner/saving_loading_models.html">保存与加载模型教程</a>——<code>state_dict</code> 约定与 <code>map_location</code> 用法。</li>
+                <li><a href="https://pytorch.org/docs/stable/generated/torch.save.html"><code>torch.save</code></a>——序列化接口。</li>
+                <li><a href="https://pytorch.org/docs/stable/generated/torch.load.html"><code>torch.load</code></a>——<code>weights_only</code> 等安全加载参数。</li>
+            </ul>
+        </section>
     <div class="footer-nav">
         <a href="10.html">← 上一章</a>
         <a href="index.html">📖 返回目录</a>

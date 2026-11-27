@@ -348,6 +348,15 @@ feature_maps = activation['conv1']  # shape: [1, 32, 32, 32]
 
 <p>这一章我们深入理解了卷积神经网络的本质——从卷积核的滑动匹配到池化层的浓缩作用，从 BatchNorm 的稳定机制到完整的 CNN 架构设计。CNN 不是深度学习中最"新"的技术，但它是视觉领域最"踏实"的技术——理解 CNN，你就理解了深度学习如何"看"世界。下一章我们进入序列数据的世界——循环神经网络和注意力机制，看看模型如何理解文本和时间序列。</p>
 
+        <section class="references" aria-labelledby="refs-09">
+            <h2 id="refs-09">参考资料与延伸阅读</h2>
+            <p>本章关于卷积、池化与 BatchNorm 的形状与行为说明，可对照下列官方资料核实。</p>
+            <ul>
+                <li><a href="https://pytorch.org/docs/stable/generated/torch.nn.Conv2d.html"><code>torch.nn.Conv2d</code></a>——输出尺寸公式与 <code>padding/dilation</code> 语义。</li>
+                <li><a href="https://pytorch.org/docs/stable/generated/torch.nn.BatchNorm2d.html"><code>torch.nn.BatchNorm2d</code></a>——训练/推理阶段的统计行为差异。</li>
+                <li><a href="https://arxiv.org/abs/1512.03385">Deep Residual Learning（ResNet, 2015）</a>——残差连接的原始论文。</li>
+            </ul>
+        </section>
     <div class="footer-nav">
         <a href="08.html">← 上一章</a>
         <a href="index.html">📖 返回目录</a>

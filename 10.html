@@ -339,6 +339,15 @@ encoder = nn.TransformerEncoder(encoder_layer, num_layers=6)
 
 <p>这一章我们从 RNN 的梯度消失问题出发，理解了 LSTM 和 GRU 的门控设计哲学，也看到了为什么自注意力在大多数情况下是更好的选择。序列数据处理是深度学习中最丰富、最具挑战性的领域之一，RNN 和注意力就是我们理解这个领域的两个支点。下一章我们来讨论一个非常实用的话题——模型保存与加载。在这个大模型时代，学会怎么把训练好的模型安全地存起来、正确地加载出来，是每个工程师的必备技能。</p>
 
+        <section class="references" aria-labelledby="refs-10">
+            <h2 id="refs-10">参考资料与延伸阅读</h2>
+            <p>本章关于循环网络与自注意力的描述，可对照下列官方资料与原始论文核实。</p>
+            <ul>
+                <li><a href="https://pytorch.org/docs/stable/generated/torch.nn.LSTM.html"><code>torch.nn.LSTM</code></a>——门控结构与输入/输出形状。</li>
+                <li><a href="https://pytorch.org/docs/stable/generated/torch.nn.Transformer.html"><code>torch.nn.Transformer</code></a>——编码器/解码器的层结构。</li>
+                <li><a href="https://arxiv.org/abs/1706.03762">Attention Is All You Need（2017）</a>——自注意力与多头注意力的原始论文。</li>
+            </ul>
+        </section>
     <div class="footer-nav">
         <a href="09.html">← 上一章</a>
         <a href="index.html">📖 返回目录</a>
